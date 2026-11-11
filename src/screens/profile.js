@@ -1,22 +1,15 @@
-// Profile and settings: change name or role, and log out.
+// Profile and settings: change name or role.
+// Logging out is in the menu under the person's name, top right.
 
 import { ROLES } from '../roles.js';
-import { getProfile, updateProfile, signOut } from '../auth/api.js';
+import { getProfile, updateProfile } from '../auth/api.js';
 import { checkName } from '../auth/validate.js';
 import { friendlyAuthError } from '../auth/errors.js';
-import { el, brand, field, messageBox, linkTo, whileBusy } from '../dom.js';
+import { topBar } from '../usermenu.js';
+import { el, field, messageBox, linkTo, whileBusy } from '../dom.js';
 
 export async function renderProfile({ session }) {
   const message = messageBox();
-  const logOut = el('button', { type: 'button', class: 'button button--danger', text: 'Log out' });
-  logOut.addEventListener('click', () => whileBusy(logOut, 'Logging out…', async () => {
-    try {
-      await signOut();
-      // The app moves to the sign-in screen by itself once signed out.
-    } catch (error) {
-      message.show(friendlyAuthError(error));
-    }
-  }));
 
   const back = linkTo('#/home', 'Back to home');
   back.className = 'text-link';
@@ -35,8 +28,11 @@ export async function renderProfile({ session }) {
 
   if (profile === null) {
     if (message.node.hidden) message.show('Your profile was not found. The database setup script may not have been run yet.');
-    return [brand(), back, heading, message.node, el('div', { class: 'push-down' }, [logOut])];
+    return [topBar({ profile: null, session }), back, heading, message.node];
   }
+
+  // Kept as its own element so the name on the menu button can be refreshed after saving.
+  let bar = topBar({ profile, session });
 
   let role = profile.role;
   const options = ROLES.map((item) => {
@@ -62,7 +58,7 @@ export async function renderProfile({ session }) {
       el('div', { class: 'segmented', role: 'group', 'aria-label': 'Account type' }, options.map(({ button }) => button)),
     ]),
     message.node,
-    el('div', { class: 'push-down stack' }, [save, logOut]),
+    el('div', { class: 'push-down' }, [save]),
   ]);
 
   form.addEventListener('submit', async (event) => {
@@ -78,6 +74,9 @@ export async function renderProfile({ session }) {
         name.input.value = saved.full_name;
         role = saved.role;
         updateRole();
+        const freshBar = topBar({ profile: saved, session });
+        bar.replaceWith(freshBar);
+        bar = freshBar;
         message.show('Saved.', 'success');
       } catch (error) {
         message.show(friendlyAuthError(error));
@@ -85,5 +84,5 @@ export async function renderProfile({ session }) {
     });
   });
 
-  return [brand(), back, heading, form];
+  return [bar, back, heading, form];
 }

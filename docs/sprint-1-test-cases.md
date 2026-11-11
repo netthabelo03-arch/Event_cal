@@ -15,7 +15,8 @@ Run these on the live app after the database setup script has been run. Record a
 | S1-09 | Wrong password | Sign in with the right email and a wrong password. | "Email or password is incorrect." |
 | S1-10 | Stay signed in | While signed in, close the tab and open the app again. | The home screen opens without asking to sign in. |
 | S1-11 | Protected screens | While signed out, open the address ending `#/profile`. | The sign-in screen is shown instead. |
-| S1-12 | Change name and role | Home, Profile and settings. Change the name, pick another role, Save changes. Go back to home. | "Saved." appears; home shows the new first name and role. |
-| S1-13 | Log out | Profile, Log out. | The sign-in screen is shown; the address ending `#/home` no longer opens home. |
+| S1-12 | Change name and role | On home, click your name in the top-right corner, then Profile. Change the name, pick another role, Save changes. Go back to home. | "Saved." appears; the name in the top-right corner and on home show the change, with the new role. |
+| S1-13 | Log out | Click your name in the top-right corner, then Log out. | The sign-in screen is shown; the address ending `#/home` no longer opens home. |
+| S1-16 | Account menu | On home, click your name in the top-right corner. Click elsewhere on the page, then open it again and press Escape. | The menu opens with Profile and Log out, and closes on an outside click and on Escape. |
 | S1-14 | Forgot password | Sign in screen, Forgot password?, enter the email, Send reset link. Open the emailed link in the same browser. Enter a new password, Save. | The same confirmation message appears for any email. The link opens "Choose a new password"; after saving, home opens and the new password works for sign-in. |
 | S1-15 | Own data only | Signed in as account A, there is no way to see or change account B's profile. In Supabase, Table Editor, `profiles` shows one row per account with the right role. | Rows exist for each account; roles match what was chosen. |
