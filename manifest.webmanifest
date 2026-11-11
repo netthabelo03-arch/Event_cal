@@ -1,0 +1,13 @@
+{
+  "name": "Event Calender",
+  "short_name": "Event Cal",
+  "description": "Short event clips, reminders and tickets.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a",
+  "icons": [
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

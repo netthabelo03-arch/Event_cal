@@ -35,18 +35,41 @@ The app is built in sprints. Each sprint has its own branch, its own folder of c
 
 Defects are recorded in [docs/defect-log.md](docs/defect-log.md).
 
-## What is here so far (Sprint 0, part 1)
+## How it is built
 
-- `src/rules/clip.js`: the 30-second and 5-second clip rules.
-- `src/rules/fees.js`: the 5% host fee and payout calculation.
-- `src/theme/tokens.css`: the green and black colours every screen uses.
-- `tests/`: automated tests for the rules above.
+Plain HTML, CSS and JavaScript. There is no framework and nothing to install.
 
-Still to come in Sprint 0: the React app shell and the installable web app setup.
+| File or folder | What it holds |
+|---|---|
+| `index.html` | The single page the app runs in |
+| `src/app.css` | Layout and controls shared by every screen |
+| `src/theme/tokens.css` | The green and black colours every screen uses |
+| `src/app.js` | Starts the app and shows the right screen |
+| `src/router.js` | Works out which screen an address means |
+| `src/roles.js` | The list of roles; add a role here and it appears on the welcome screen |
+| `src/screens/` | One file per screen |
+| `src/rules/` | Product rules: clip length and the host fee |
+| `src/storage.js` | Remembers the chosen role on the device |
+| `sw.js`, `manifest.webmanifest` | Let people add the app to their home screen |
+| `tests/` | Automated tests |
+| `docs/defect-log.md` | The defect log |
+
+## What works so far (Sprint 0)
+
+- The welcome screen, where a person picks Goer, Host or Artist.
+- A placeholder home screen for each role, saying which sprint brings the real one.
+- The app can be added to a phone's home screen.
+
+## Opening the app
+
+The app must be opened through a web address, not by double-clicking `index.html`; browsers block this kind of JavaScript when a file is opened directly.
+
+- **Online:** turn on GitHub Pages for this repository (Settings, then Pages, then deploy from a branch) and open the address GitHub gives you.
+- **On your computer:** in this folder run `python -m http.server 8000`, then open `http://localhost:8000`.
 
 ## Running the tests
 
-You need Node.js 20 or newer. No packages have to be installed yet.
+You need Node.js 20 or newer. Nothing has to be installed.
 
 ```
 npm test
