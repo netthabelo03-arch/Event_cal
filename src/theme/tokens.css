@@ -1,6 +1,7 @@
 /* Event Calender theme: green on black. Every screen takes its colours from here. */
 :root {
   --color-ground: #0a0a0a;
+  --color-panel: #111111;
   --color-surface: #171717;
   --color-surface-raised: #262626;
   --color-line: #2a2a2a;

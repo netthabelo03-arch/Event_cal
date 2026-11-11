@@ -230,6 +230,8 @@ a.button--quiet:hover { color: var(--color-text); }
 .showcase { display: none; }
 
 @media (min-width: 960px) {
+  /* The moving panel takes the larger share of the screen; the form sits in a
+     narrower panel on the right whose rounded corner overlaps it. */
   body.with-showcase .showcase {
     position: sticky;
     top: 0;
@@ -237,14 +239,29 @@ a.button--quiet:hover { color: var(--color-text); }
     height: 100vh;
     padding: 64px;
     display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    gap: 12px;
+    align-items: center;
+    justify-content: center;
     overflow: hidden;
     background: var(--color-ground);
-    border-right: 1px solid var(--color-line);
   }
-  body.with-showcase .app { flex: 0 0 480px; margin: 0 clamp(24px, 5vw, 96px); }
+
+  body.with-showcase .app {
+    position: relative;
+    z-index: 1;
+    flex: 0 0 42%;
+    min-width: 440px;
+    max-width: none;
+    margin: 0 0 0 -40px;
+    padding: clamp(48px, 14vh, 160px) clamp(32px, 5vw, 88px) 48px;
+    background: var(--color-panel);
+    border-left: 1px solid var(--color-line);
+    border-radius: 40px 0 0 40px;
+  }
+  /* Keep the form a comfortable width inside the panel. */
+  body.with-showcase .app > * { width: 100%; max-width: 440px; margin-left: auto; margin-right: auto; }
+  /* On a tall screen the buttons follow the fields instead of dropping to the bottom. */
+  body.with-showcase .form { flex: 0 1 auto; }
+  body.with-showcase .push-down { margin-top: 16px; }
 }
 
 .showcase__glow {
@@ -264,10 +281,11 @@ a.button--quiet:hover { color: var(--color-text); }
   to { transform: translate(-40px, 140px) scale(0.95); }
 }
 
+.showcase__copy { position: relative; max-width: 560px; display: flex; flex-direction: column; gap: 16px; }
 .showcase__title,
-.showcase__text { position: relative; margin: 0; max-width: 520px; }
-.showcase__title { font-family: var(--font-heading); font-weight: 700; font-size: clamp(40px, 4.5vw, 64px); line-height: 1.05; }
-.showcase__text { font-size: 18px; color: var(--color-text-soft); }
+.showcase__text { margin: 0; }
+.showcase__title { font-family: var(--font-heading); font-weight: 700; font-size: clamp(44px, 5vw, 72px); line-height: 1.05; }
+.showcase__text { font-size: 20px; color: var(--color-text-soft); }
 
 /* People who ask their device for less motion get a still panel. */
 @media (prefers-reduced-motion: reduce) {
