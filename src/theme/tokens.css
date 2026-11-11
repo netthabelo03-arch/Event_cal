@@ -1,0 +1,25 @@
+/* Event Calender theme: green on black. Every screen takes its colours from here. */
+:root {
+  --color-ground: #0a0a0a;
+  --color-surface: #171717;
+  --color-surface-raised: #262626;
+  --color-line: #2a2a2a;
+  --color-line-strong: #404040;
+  --color-text: #fafafa;
+  --color-text-soft: #d4d4d4;
+  --color-text-muted: #a3a3a3;
+  --color-accent: #22c55e;
+  --color-accent-hover: #4ade80;
+  --color-on-accent: #0a0a0a;
+  --color-success-bg: #14532d;
+  --color-danger: #f87171;
+  --color-danger-bg: #450a0a;
+  --color-warning: #facc15;
+
+  --font-heading: 'Space Grotesk', system-ui, sans-serif;
+  --font-body: Inter, system-ui, sans-serif;
+
+  --radius-control: 14px;
+  --radius-card: 16px;
+  --touch-target: 44px;
+}
