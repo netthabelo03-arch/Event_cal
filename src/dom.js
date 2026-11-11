@@ -30,3 +30,71 @@ export function brand() {
   mark.style.color = 'var(--color-accent)';
   return el('div', { class: 'brand' }, [mark, el('span', { class: 'brand__name', text: 'Event Calender' })]);
 }
+
+/** A link to another screen of the app, for example linkTo('#/signin', 'Sign in'). */
+export function linkTo(hash, text) {
+  return el('a', { href: hash, text });
+}
+
+/**
+ * A labelled text input with room for an error underneath.
+ * @returns {{ node: HTMLElement, input: HTMLInputElement, setError: (message: string | null) => void }}
+ */
+export function field({ id, label, type = 'text', autocomplete = 'off', value = '' }) {
+  const input = el('input', { id, name: id, type, autocomplete, class: 'input' });
+  input.value = value;
+  const error = el('p', { class: 'field__error', id: `${id}-error` });
+  error.hidden = true;
+  const node = el('div', { class: 'field' }, [el('label', { for: id, class: 'field__label', text: label }), input, error]);
+  function setError(message) {
+    error.textContent = message ?? '';
+    error.hidden = !message;
+    if (message) {
+      input.setAttribute('aria-invalid', 'true');
+      input.setAttribute('aria-describedby', error.id);
+    } else {
+      input.removeAttribute('aria-invalid');
+      input.removeAttribute('aria-describedby');
+    }
+  }
+  return { node, input, setError };
+}
+
+/**
+ * A box for a message about the whole form (an error or a confirmation).
+ * @returns {{ node: HTMLElement, show: (text: string, kind?: 'error' | 'success') => void, clear: () => void }}
+ */
+export function messageBox() {
+  const node = el('p', { class: 'message', role: 'alert' });
+  node.hidden = true;
+  return {
+    node,
+    show(text, kind = 'error') {
+      node.textContent = text;
+      node.className = `message message--${kind}`;
+      node.hidden = false;
+    },
+    clear() {
+      node.textContent = '';
+      node.hidden = true;
+    },
+  };
+}
+
+/**
+ * Run an action while a button shows it is working, so it cannot be pressed twice.
+ * @param {HTMLButtonElement} button
+ * @param {string} busyText text to show while working
+ * @param {() => Promise<void>} action
+ */
+export async function whileBusy(button, busyText, action) {
+  const label = button.textContent;
+  button.disabled = true;
+  button.textContent = busyText;
+  try {
+    await action();
+  } finally {
+    button.disabled = false;
+    button.textContent = label;
+  }
+}

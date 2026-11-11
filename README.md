@@ -48,17 +48,34 @@ Plain HTML, CSS and JavaScript. There is no framework and nothing to install.
 | `src/router.js` | Works out which screen an address means |
 | `src/roles.js` | The list of roles; add a role here and it appears on the welcome screen |
 | `src/screens/` | One file per screen |
+| `src/auth/` | Accounts: form checks, error messages and the calls to Supabase |
+| `src/config.js` | The Supabase project address and publishable key |
+| `supabase/` | Database setup scripts, run once in the Supabase dashboard |
 | `src/rules/` | Product rules: clip length and the host fee |
 | `src/storage.js` | Remembers the chosen role on the device |
 | `sw.js`, `manifest.webmanifest` | Let people add the app to their home screen |
 | `tests/` | Automated tests |
 | `docs/defect-log.md` | The defect log |
 
-## What works so far (Sprint 0)
+## What works so far (Sprints 0 and 1)
 
 - The welcome screen, where a person picks Goer, Host or Artist.
-- A placeholder home screen for each role, saying which sprint brings the real one.
+- Sign up, sign in, forgot password, profile and log out.
+- A home screen that greets the signed-in person by name and role, saying which sprint brings the real one.
 - The app can be added to a phone's home screen.
+
+## Accounts (Sprint 1)
+
+People sign up with a name, email and password as a Goer, Host or Artist, and can sign in, reset a forgotten password, change their name or role, and log out. Accounts and profiles are kept in Supabase.
+
+One-time setup in the Supabase dashboard:
+
+1. **Create the profiles table.** Open SQL Editor, paste the contents of [`supabase/001_profiles.sql`](supabase/001_profiles.sql) and press Run.
+2. **Tell Supabase where the app lives.** Under Authentication, then URL Configuration, set Site URL to the app's web address and add the same address to Redirect URLs. Email links (confirm account, reset password) send people back there.
+
+`src/config.js` holds the Supabase project URL and publishable key. The publishable key is meant to be public. Never put a secret key in this repository.
+
+Manual test cases for this sprint are in [docs/sprint-1-test-cases.md](docs/sprint-1-test-cases.md).
 
 ## Opening the app
 

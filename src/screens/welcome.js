@@ -1,11 +1,11 @@
-// Welcome screen: pick how you will use the app.
+// Welcome screen: pick how you will use the app, then create an account.
 
 import { ROLES } from '../roles.js';
-import { homeHash } from '../router.js';
+import { hashFor } from '../router.js';
 import { loadRole, saveRole } from '../storage.js';
-import { el, icon, brand } from '../dom.js';
+import { el, icon, brand, linkTo } from '../dom.js';
 
-export function renderWelcome() {
+export function renderWelcome({ navigate }) {
   let chosen = loadRole();
   if (!ROLES.some((role) => role.id === chosen)) chosen = null;
 
@@ -36,7 +36,7 @@ export function renderWelcome() {
   continueButton.addEventListener('click', () => {
     if (chosen === null) return;
     saveRole(chosen);
-    window.location.hash = homeHash(chosen);
+    navigate(hashFor({ screen: 'signup', roleId: chosen }));
   });
 
   update();
@@ -51,6 +51,9 @@ export function renderWelcome() {
       el('p', { class: 'caption', text: 'How will you use the app?' }),
       ...cards.map(({ card }) => card),
     ]),
-    el('div', { class: 'push-down' }, [continueButton]),
+    el('div', { class: 'push-down stack' }, [
+      continueButton,
+      el('p', { class: 'link-row' }, ['Already have an account? ', linkTo('#/signin', 'Sign in')]),
+    ]),
   ];
 }
