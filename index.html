@@ -14,7 +14,17 @@
   <link rel="stylesheet" href="src/app.css">
 </head>
 <body>
-  <main id="app" class="app" tabindex="-1"></main>
+  <div class="shell">
+    <!-- Decorative moving panel beside the sign-in screens on big screens. -->
+    <aside class="showcase" aria-hidden="true">
+      <span class="showcase__glow showcase__glow--one"></span>
+      <span class="showcase__glow showcase__glow--two"></span>
+      <span class="showcase__glow showcase__glow--three"></span>
+      <p class="showcase__title">Never miss what's on.</p>
+      <p class="showcase__text">Short event clips. Reminders. Tickets.</p>
+    </aside>
+    <main id="app" class="app" tabindex="-1"></main>
+  </div>
   <noscript>Event Calender needs JavaScript to run.</noscript>
   <script type="module" src="src/app.js"></script>
 </body>

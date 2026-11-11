@@ -1,7 +1,7 @@
 // Starts the app: finds out whether someone is signed in, shows the right
 // screen for the address, and keeps both in step.
 
-import { parseRoute, resolveRoute, hashFor } from './router.js';
+import { parseRoute, resolveRoute, hashFor, SHOWCASE_SCREENS } from './router.js';
 import { currentSession, onAuthChange } from './auth/api.js';
 import { el, brand } from './dom.js';
 import { renderWelcome } from './screens/welcome.js';
@@ -43,6 +43,9 @@ async function show() {
     navigate(hashFor(route));
     return;
   }
+
+  // The moving panel only sits beside the sign-in screens (and only on big screens; see app.css).
+  document.body.classList.toggle('with-showcase', SHOWCASE_SCREENS.includes(route.screen));
 
   // Screens that fetch data are slow; if the person moves on meanwhile,
   // only the newest screen may be drawn.

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseRoute, resolveRoute, hashFor, PROTECTED_SCREENS, GUEST_SCREENS } from '../src/router.js';
+import { parseRoute, resolveRoute, hashFor, PROTECTED_SCREENS, GUEST_SCREENS, SHOWCASE_SCREENS } from '../src/router.js';
 import { ROLES, findRole, isRole } from '../src/roles.js';
 
 test('an empty address shows the welcome screen', () => {
@@ -83,4 +83,13 @@ test('findRole and isRole agree', () => {
   assert.equal(findRole('nobody'), undefined);
   assert.equal(isRole('artist'), true);
   assert.equal(isRole('nobody'), false);
+});
+
+test('the moving panel shows beside the sign-in screens only', () => {
+  for (const screen of ['welcome', 'signup', 'signin', 'forgot', 'new-password']) {
+    assert.equal(SHOWCASE_SCREENS.includes(screen), true);
+  }
+  for (const screen of ['home', 'profile']) {
+    assert.equal(SHOWCASE_SCREENS.includes(screen), false);
+  }
 });

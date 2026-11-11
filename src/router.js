@@ -15,6 +15,9 @@ export const PROTECTED_SCREENS = ['home', 'profile', 'new-password'];
 /** Screens that make no sense once signed in. */
 export const GUEST_SCREENS = ['welcome', 'signup', 'signin', 'forgot'];
 
+/** Screens that get the moving panel beside them on big screens. */
+export const SHOWCASE_SCREENS = [...GUEST_SCREENS, 'new-password'];
+
 /**
  * @param {string} hash the address hash, for example "#/signup/host"
  * @returns {{ screen: string, roleId?: string | null }}

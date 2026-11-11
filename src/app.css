@@ -21,8 +21,11 @@ a:hover { color: var(--color-accent-hover); }
 :focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 
 /* The app is a single phone-width column, centred on larger screens. */
+.shell { min-height: 100vh; display: flex; }
+
 .app {
-  min-height: 100%;
+  flex: 1;
+  width: 100%;
   max-width: 480px;
   margin: 0 auto;
   padding: 48px 24px 32px;
@@ -220,4 +223,53 @@ a.button--quiet:hover { color: var(--color-text); }
   caret-color: var(--color-text);
   box-shadow: 0 0 0 1000px var(--color-surface) inset;
   transition: background-color 9999s ease-out;
+}
+
+/* Moving panel beside the sign-in screens. Big screens only, so phones
+   spend no data or battery on it. It is decoration: the form never waits for it. */
+.showcase { display: none; }
+
+@media (min-width: 960px) {
+  body.with-showcase .showcase {
+    position: sticky;
+    top: 0;
+    flex: 1;
+    height: 100vh;
+    padding: 64px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 12px;
+    overflow: hidden;
+    background: var(--color-ground);
+    border-right: 1px solid var(--color-line);
+  }
+  body.with-showcase .app { flex: 0 0 480px; margin: 0 clamp(24px, 5vw, 96px); }
+}
+
+.showcase__glow {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgb(34 197 94 / 0.5), transparent 65%);
+  filter: blur(40px);
+  animation: showcase-drift 22s ease-in-out infinite alternate;
+}
+.showcase__glow--one { width: 520px; height: 520px; top: -120px; left: -80px; }
+.showcase__glow--two { width: 380px; height: 380px; top: 35%; right: -100px; animation-duration: 28s; animation-delay: -6s; }
+.showcase__glow--three { width: 300px; height: 300px; bottom: 12%; left: 20%; opacity: 0.6; animation-duration: 34s; animation-delay: -12s; }
+
+@keyframes showcase-drift {
+  from { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(60px, 80px) scale(1.15); }
+  to { transform: translate(-40px, 140px) scale(0.95); }
+}
+
+.showcase__title,
+.showcase__text { position: relative; margin: 0; max-width: 520px; }
+.showcase__title { font-family: var(--font-heading); font-weight: 700; font-size: clamp(40px, 4.5vw, 64px); line-height: 1.05; }
+.showcase__text { font-size: 18px; color: var(--color-text-soft); }
+
+/* People who ask their device for less motion get a still panel. */
+@media (prefers-reduced-motion: reduce) {
+  .showcase__glow { animation: none; }
 }
