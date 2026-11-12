@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Event Calender: make phone-notification keys</title>
+<style>
+  body { margin: 0; padding: 32px 20px; background: #0a0a0a; color: #fafafa; font: 16px/1.5 system-ui, sans-serif; }
+  main { max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+  h1 { margin: 0; font-size: 28px; }
+  p { margin: 0; color: #d4d4d4; }
+  button { min-height: 48px; padding: 0 20px; font: inherit; font-weight: 600; color: #0a0a0a; background: #22c55e; border: 0; border-radius: 999px; cursor: pointer; align-self: flex-start; }
+  label { font-weight: 600; }
+  textarea { width: 100%; box-sizing: border-box; padding: 12px; font: 14px/1.4 ui-monospace, monospace; color: #fafafa; background: #171717; border: 1px solid #404040; border-radius: 12px; resize: none; }
+  .warn { padding: 12px 16px; background: #450a0a; color: #fca5a5; border-radius: 12px; }
+  [hidden] { display: none; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Make phone-notification keys</h1>
+  <p>This page makes the key pair that lets Event Calender send phone notifications. The keys are made here in your browser and are not sent anywhere.</p>
+  <button type="button" id="make">Make keys</button>
+  <div id="result" hidden>
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <label for="public">Public key: send this to Claude so it goes into the app, and add it in Supabase as <code>VAPID_PUBLIC_KEY</code>.</label>
+      <textarea id="public" rows="3" readonly></textarea>
+      <label for="private">Private key: add it in Supabase as <code>VAPID_PRIVATE_KEY</code>. Do not send it to anyone.</label>
+      <textarea id="private" rows="2" readonly></textarea>
+      <p class="warn">Keep the private key secret. Anyone who has it could send notifications to your users. Close this page after copying both keys; making keys again creates a new, different pair.</p>
+    </div>
+  </div>
+</main>
+<script>
+  const toBase64Url = (bytes) => btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const fromBase64Url = (text) => Uint8Array.from(atob(text.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - (text.length % 4)) % 4)), (c) => c.charCodeAt(0));
+  document.getElementById('make').addEventListener('click', async () => {
+    const pair = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+    const jwk = await crypto.subtle.exportKey('jwk', pair.privateKey);
+    const raw = new Uint8Array([4, ...fromBase64Url(jwk.x), ...fromBase64Url(jwk.y)]);
+    document.getElementById('public').value = toBase64Url(raw);
+    document.getElementById('private').value = jwk.d;
+    document.getElementById('result').hidden = false;
+  });
+</script>
+</body>
+</html>

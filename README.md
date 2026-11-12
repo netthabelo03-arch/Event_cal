@@ -129,8 +129,9 @@ A small program on Supabase (the `send-reminders` Edge Function) checks every 5 
 1. **Database.** In the SQL Editor run [`supabase/004_reminders.sql`](supabase/004_reminders.sql).
 2. **Email service.** Create a free account at resend.com, add your domain and add the DNS records it shows at your domain provider until Resend says the domain is verified. Create an API key.
 3. **The sender.** In Supabase, open Edge Functions, create a function named `send-reminders`, and add the two files from [`supabase/functions/send-reminders/`](supabase/functions/send-reminders/) (`index.ts` and `schedule.js`). Turn **off** "Enforce JWT verification" for it (it checks the project's secret key instead), then deploy.
-4. **Secrets.** In Edge Functions, Secrets, add: `RESEND_API_KEY`, `EMAIL_FROM` (for example `Event Calender <reminders@yourdomain.co.za>`), `APP_URL` (`https://netthabelo03-arch.github.io/Event_cal/`), `VAPID_PUBLIC_KEY` (the value in `src/config.js`), `VAPID_PRIVATE_KEY` (given privately, never stored in this repository) and `VAPID_SUBJECT` (`mailto:` followed by your email).
-5. **Schedule.** In the SQL Editor, open [`supabase/005_schedule_reminders.sql`](supabase/005_schedule_reminders.sql), put in your project address and secret key where it says, and run it. Do not save the file with the real key in it.
+4. **Notification keys.** Open `tools/notification-keys.html` on the live site and press Make keys. The page makes the pair in your browser. The public key goes into `src/config.js` (`VAPID_PUBLIC_KEY`); the private key goes only into Supabase in the next step. Until the public key is set, the app says phone notifications are not available.
+5. **Secrets.** In Edge Functions, Secrets, add: `RESEND_API_KEY`, `EMAIL_FROM` (for example `Event Calender <reminders@yourdomain.co.za>`), `APP_URL` (`https://netthabelo03-arch.github.io/Event_cal/`), `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` (from step 4) and `VAPID_SUBJECT` (`mailto:` followed by your email).
+6. **Schedule.** In the SQL Editor, open [`supabase/005_schedule_reminders.sql`](supabase/005_schedule_reminders.sql), put in your project address and secret key where it says, and run it. Do not save the file with the real key in it.
 
 To check the sender, open Edge Functions, `send-reminders`, Logs. Each run reports how many emails and notifications it sent and any failures.
 

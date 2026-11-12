@@ -90,8 +90,18 @@ test('phone notifications: what each device is told', () => {
   assert.equal(pushStatus({ ...READY, isIos: true, isStandalone: true }), 'ready');
 });
 
-test('the public notification key is a valid 65-byte key', () => {
+test('phone notifications stay off until the key is set', () => {
+  assert.equal(pushStatus({ ...READY, configured: false }), 'unsupported');
+});
+
+test('the public notification key, once set, is a valid 65-byte key', () => {
+  if (VAPID_PUBLIC_KEY === '') return;
   const bytes = keyBytes(VAPID_PUBLIC_KEY);
   assert.equal(bytes.length, 65);
   assert.equal(bytes[0], 4);
+});
+
+test('the key converter turns a known key into its bytes', () => {
+  const bytes = keyBytes('BAEC');
+  assert.deepEqual([...bytes], [4, 1, 2]);
 });

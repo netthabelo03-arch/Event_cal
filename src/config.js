@@ -7,4 +7,6 @@ export const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable__Ekahk-Fi8yx2wZ7rcUrTQ_f
 
 // Public half of the phone-notification key pair. Meant to be public.
 // The private half lives only in Supabase (Edge Functions, Secrets).
-export const VAPID_PUBLIC_KEY = 'BOr_3SdDY_DlINPA5yHEZe-_FKaCXLeQ_HQIKdrwW5pla7rh806N7g3FRAe8rrgUjyn2XAzv9q4G0jJPCzNXdfI';
+// Make the pair with tools/notification-keys.html. Empty until that is done:
+// the app then says phone notifications are not available yet.
+export const VAPID_PUBLIC_KEY = '';

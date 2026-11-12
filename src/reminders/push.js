@@ -10,7 +10,8 @@ import { VAPID_PUBLIC_KEY } from '../config.js';
  *  'blocked'      the person said no earlier; it can only be changed in the browser's settings
  *  'unsupported'  this browser cannot receive them
  */
-export function pushStatus({ hasServiceWorker, hasPushManager, hasNotification, permission, isIos, isStandalone }) {
+export function pushStatus({ configured = true, hasServiceWorker, hasPushManager, hasNotification, permission, isIos, isStandalone }) {
+  if (!configured) return 'unsupported';
   if (isIos && !isStandalone) return 'install';
   if (!hasServiceWorker || !hasPushManager || !hasNotification) return 'unsupported';
   if (permission === 'denied') return 'blocked';
@@ -29,6 +30,7 @@ export function devicePushStatus() {
   const isIos = /iPad|iPhone|iPod/.test(nav.userAgent) || (nav.platform === 'MacIntel' && nav.maxTouchPoints > 1);
   const isStandalone = window.matchMedia?.('(display-mode: standalone)').matches === true || nav.standalone === true;
   return pushStatus({
+    configured: VAPID_PUBLIC_KEY.length > 0,
     hasServiceWorker: 'serviceWorker' in nav,
     hasPushManager: 'PushManager' in window,
     hasNotification: 'Notification' in window,
