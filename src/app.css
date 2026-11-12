@@ -581,3 +581,10 @@ body.full .app { max-width: none; padding: 0; gap: 0; }
   .feed__slide { padding-top: calc(68px + env(safe-area-inset-top, 0px)); }
   .feed__info { padding: 14px 16px calc(20px + env(safe-area-inset-bottom, 0px)); }
 }
+
+/* Clips (defect D-004): always show the whole frame, never crop it, so any
+   words a host put inside their video stay fully visible and readable. */
+.feed__video,
+.card__clip,
+.clip { object-fit: contain; }
+@media (max-width: 480px) { .feed__video { object-fit: contain; } }
