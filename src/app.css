@@ -623,3 +623,19 @@ body.full .app { max-width: none; padding: 0; gap: 0; }
   .feed__video { object-fit: cover; }
   .feed__info { padding: 120px 16px calc(24px + env(safe-area-inset-bottom, 0px)); }
 }
+
+/* Feed (D-004, second fix): the clip is shown whole, never cut, centred on the
+   screen. A blurred, darkened copy of it fills the space around it, as in
+   short-video apps, so the screen still feels full. */
+.feed__backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  filter: blur(28px) brightness(0.55);
+  transform: scale(1.15);
+}
+.feed__slide { overflow: hidden; }
+.feed__video,
+.feed__video:is(*) { object-fit: contain; background: transparent; }
+@media (max-width: 480px) { .feed__video { object-fit: contain; } }

@@ -3,7 +3,7 @@
 
 import { listLiveEvents, clipUrl } from '../events/api.js';
 import { formatWhen } from '../events/rules.js';
-import { startFeed } from '../events/feed.js';
+import { startFeed, attachBackdrop } from '../events/feed.js';
 import { PREVIEW_SECONDS } from '../rules/clip.js';
 import { hashFor } from '../router.js';
 import { el, icon } from '../dom.js';
@@ -15,7 +15,12 @@ async function slide(event) {
   const video = el('video', { class: 'feed__video', muted: '', playsinline: '', preload: 'metadata', 'aria-hidden': 'true' });
   video.muted = true;
   video.src = await clipUrl(event.clip_path);
+  // A blurred copy of the clip fills the screen behind it, so the clip itself
+  // is shown whole (never cut) whatever its shape.
+  const backdrop = el('canvas', { class: 'feed__backdrop', width: '36', height: '64', 'aria-hidden': 'true' });
+  attachBackdrop(video, backdrop);
   const node = el('a', { class: 'feed__slide', href: hashFor({ screen: 'detail', kind: 'event', id: event.id }) }, [
+    backdrop,
     video,
     el('span', { class: 'feed__info' }, [
       el('span', { class: 'feed__host', text: event.host_name || 'A host' }),

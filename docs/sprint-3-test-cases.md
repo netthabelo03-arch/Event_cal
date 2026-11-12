@@ -21,5 +21,5 @@ Before testing, run `supabase/003_views.sql` in the Supabase SQL Editor. You nee
 | S3-15 | Views counted | As a Goer, open an event page. Then, as its host, open My events. | The event shows "1 view". |
 | S3-16 | One view a day per device | As the same Goer, open the same event again. | The host still sees the same count. |
 | S3-17 | Host's own visits not counted | As the host, open your own live event's page, then My events. | The count does not go up. |
-| S3-18 | Full-screen feed | Open the feed on a phone held upright, with a clip filmed upright. Then open it on a computer. | Phone: the clip fills the whole screen with the details over its lower part. Computer: a phone-shaped column of clips in the middle of the screen. |
-| S3-19 | Filming advice | Open Promote an event. | Under "Promo video" the form asks hosts to film upright and keep words away from the edges. |
+| S3-18 | Full-screen feed, nothing cut | Open the feed on a phone held upright with (a) a clip filmed upright and (b) a clip filmed sideways. Then open it on a computer. | (a) The clip fills the screen. (b) The whole clip is shown, centred, with a blurred copy of it filling the space above and below; no words in the clip are cut. Computer: a phone-shaped column in the middle. |
+| S3-19 | Filming tip | Open Promote an event. | Under "Promo video" a tip suggests filming upright so the clip fills the screen. |

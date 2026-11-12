@@ -72,3 +72,63 @@ export function startFeed(container, slides) {
   for (const slide of slides) observer.observe(slide.node);
   return true;
 }
+
+/**
+ * The source rectangle of a video frame that fills a target of the given
+ * shape without stretching (the middle part, trimmed at the sides or top).
+ * @returns {{ sx: number, sy: number, sw: number, sh: number } | null}
+ */
+export function coverCrop(videoWidth, videoHeight, targetWidth, targetHeight) {
+  if (!(videoWidth > 0 && videoHeight > 0 && targetWidth > 0 && targetHeight > 0)) return null;
+  const videoRatio = videoWidth / videoHeight;
+  const targetRatio = targetWidth / targetHeight;
+  if (videoRatio > targetRatio) {
+    const sw = videoHeight * targetRatio;
+    return { sx: (videoWidth - sw) / 2, sy: 0, sw, sh: videoHeight };
+  }
+  const sh = videoWidth / targetRatio;
+  return { sx: 0, sy: (videoHeight - sh) / 2, sw: videoWidth, sh };
+}
+
+/**
+ * Paint a tiny copy of the video onto a canvas, which the page blurs and
+ * stretches behind the clip. It repaints about ten times a second while the
+ * clip plays and stops when it pauses. The canvas is small, so this is cheap.
+ */
+export function attachBackdrop(video, canvas) {
+  const context = canvas.getContext?.('2d');
+  if (!context) return;
+  let painting = false;
+  let last = 0;
+
+  function paint() {
+    const crop = coverCrop(video.videoWidth, video.videoHeight, canvas.width, canvas.height);
+    if (!crop) return;
+    try {
+      context.drawImage(video, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, canvas.width, canvas.height);
+    } catch {
+      // A frame that is not ready yet: try again on the next tick.
+    }
+  }
+
+  function loop(time) {
+    if (!painting) return;
+    if (time - last > 100) {
+      paint();
+      last = time;
+    }
+    requestAnimationFrame(loop);
+  }
+
+  // The first frame, so a clip that is not playing yet still has its backdrop.
+  video.addEventListener('loadeddata', paint);
+  video.addEventListener('play', () => {
+    if (painting) return;
+    painting = true;
+    requestAnimationFrame(loop);
+  });
+  video.addEventListener('pause', () => {
+    painting = false;
+    paint();
+  });
+}

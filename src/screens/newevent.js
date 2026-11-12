@@ -58,7 +58,7 @@ export async function renderNewEvent({ session, navigate }) {
   let clipSeconds = null;
   const clipInput = el('input', { id: 'clip', type: 'file', accept: Object.keys(CLIP_TYPES).join(','), class: 'file-input' });
   const clipStatus = el('p', { class: 'field__hint', text: `The first ${PREVIEW_SECONDS} seconds is what people see in the feed. Put your hook there.` });
-  const shapeHint = el('p', { class: 'field__hint', text: 'Film upright (portrait), like a normal phone video: the feed fills the whole screen. Keep any words in the middle, away from the edges, so they are not cut off.' });
+  const shapeHint = el('p', { class: 'field__hint', text: 'Tip: film upright (portrait), like a normal phone video, so your clip fills the whole screen in the feed. Clips filmed sideways are shown whole, with a blurred fill above and below.' });
   const clipError = errorLine();
   clipInput.addEventListener('change', async () => {
     clipFile = clipInput.files[0] ?? null;
