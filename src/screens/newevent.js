@@ -58,6 +58,7 @@ export async function renderNewEvent({ session, navigate }) {
   let clipSeconds = null;
   const clipInput = el('input', { id: 'clip', type: 'file', accept: Object.keys(CLIP_TYPES).join(','), class: 'file-input' });
   const clipStatus = el('p', { class: 'field__hint', text: `The first ${PREVIEW_SECONDS} seconds is what people see in the feed. Put your hook there.` });
+  const shapeHint = el('p', { class: 'field__hint', text: 'Film upright (portrait), like a normal phone video: the feed fills the whole screen. Keep any words in the middle, away from the edges, so they are not cut off.' });
   const clipError = errorLine();
   clipInput.addEventListener('change', async () => {
     clipFile = clipInput.files[0] ?? null;
@@ -100,7 +101,7 @@ export async function renderNewEvent({ session, navigate }) {
   const form = el('form', { class: 'form', novalidate: '' }, [
     el('div', { class: 'field' }, [
       el('label', { for: 'clip', class: 'field__label', text: `Promo video (at most ${MAX_CLIP_SECONDS} seconds)` }),
-      clipInput, clipStatus, clipError.node,
+      shapeHint, clipInput, clipStatus, clipError.node,
     ]),
     title.node,
     el('div', { class: 'field-pair' }, [date.node, time.node]),
