@@ -526,3 +526,28 @@ body.full .app { max-width: none; padding: 0; gap: 0; }
   pointer-events: none;
 }
 .feed__empty { min-height: 100vh; padding: 96px 24px; display: flex; flex-direction: column; gap: 16px; max-width: 480px; margin: 0 auto; }
+
+/* Phones (defect D-003): keep the top bar, the feed text and paired fields from overlapping. */
+.topbar { min-width: 0; }
+.topbar .brand { min-width: 0; flex-shrink: 1; }
+.topbar .brand__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.topbar__actions { flex-shrink: 0; }
+.field-pair > * { min-width: 0; }
+
+@media (max-width: 480px) {
+  .app { padding: 24px 16px 32px; }
+  .title { font-size: 28px; }
+  /* Only the logo shows; the name would collide with the buttons. */
+  .topbar .brand__name { display: none; }
+  .topbar__actions { gap: 8px; }
+  .topbar__link { font-size: 14px; padding: 12px 2px; }
+  .button--small { padding: 0 16px; font-size: 14px; }
+  .user-menu__button { max-width: 140px; padding: 0 10px 0 12px; }
+  .field-pair { grid-template-columns: 1fr; }
+
+  /* Feed: the hint moves up into the top bar's space instead of covering the text. */
+  .feed__hint { display: none; }
+  .feed__info { padding: 96px 16px calc(24px + env(safe-area-inset-bottom, 0px)); }
+  .feed__title { font-size: 24px; }
+  .feed__bar { padding: calc(12px + env(safe-area-inset-top, 0px)) 12px 12px; }
+}
