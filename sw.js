@@ -2,7 +2,7 @@
 // It always tries the network first, so people get the newest version,
 // and only falls back to the saved copy when there is no connection.
 
-const CACHE = 'event-cal-shell-v1';
+const CACHE = 'event-cal-shell-v2';
 
 self.addEventListener('install', () => {
   self.skipWaiting();
@@ -21,7 +21,10 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET' || new URL(request.url).origin !== self.location.origin) return;
 
   event.respondWith(
-    fetch(request)
+    // "no-cache" makes the browser check with the server every time, so a new
+    // version of the app is picked up at once instead of after the browser's
+    // own cache expires (up to 10 minutes on GitHub Pages).
+    fetch(request, { cache: 'no-cache' })
       .then((response) => {
         if (response.ok) {
           const copy = response.clone();
