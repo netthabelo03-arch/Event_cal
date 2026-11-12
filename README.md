@@ -55,6 +55,8 @@ Plain HTML, CSS and JavaScript. There is no framework and nothing to install.
 | `src/events/` | Events: the form's rules, statuses, dates, and the calls to Supabase |
 | `src/viewer.js` | Who is signed in: their profile and whether they are an admin |
 | `src/reminders/` | Reminders and phone notifications in the app |
+| `src/tickets/` | Ticket types, the tickets box, prices and QR codes |
+| `supabase/functions/checkout/`, `supabase/functions/paystack-webhook/` | Starting and confirming Paystack payments |
 | `supabase/functions/send-reminders/` | The program on Supabase that sends reminder emails and phone notifications |
 | `src/config.js` | The Supabase project address and publishable key |
 | `supabase/` | Database setup scripts, run once in the Supabase dashboard |
@@ -63,7 +65,7 @@ Plain HTML, CSS and JavaScript. There is no framework and nothing to install.
 | `tests/` | Automated tests |
 | `docs/defect-log.md` | The defect log |
 
-## What works so far (Sprints 0 to 4)
+## What works so far (Sprints 0 to 5)
 
 - Discover, open to everyone, with sample events, hosts and music.
 - Item details that need a log-in, returning to the clicked item afterwards.
@@ -71,6 +73,7 @@ Plain HTML, CSS and JavaScript. There is no framework and nothing to install.
 - Hosts post an event with a clip of at most 30 seconds; admins approve or reject it; approved events show on Discover with their own page.
 - A full-screen feed of 5-second previews, search with category and date filters, real host pages, and view counts for hosts.
 - Reminders: an email 1 day before and a phone notification 2 hours before each event a person taps Remind me on.
+- Tickets: hosts set ticket types; Goers buy them through Paystack (or get free ones) and see them in My tickets with a QR code.
 - The app can be added to a phone's home screen.
 
 ## Accounts (Sprint 1)
@@ -136,6 +139,26 @@ A small program on Supabase (the `send-reminders` Edge Function) checks every 5 
 To check the sender, open Edge Functions, `send-reminders`, Logs. Each run reports how many emails and notifications it sent and any failures.
 
 Manual test cases for this sprint are in [docs/sprint-4-test-cases.md](docs/sprint-4-test-cases.md).
+
+## Tickets (Sprint 5)
+
+Hosts set ticket types when they promote an event (for example General R150, 200 of them; a price of 0 makes free tickets). On the event page a Goer picks how many of each (at most 10 per order) and pays on Paystack's secure page. Once Paystack confirms the payment the tickets appear in **My tickets**, each with a QR code and a code to show at the door. Free tickets are issued at once.
+
+Prices and stock are checked in the database, never trusted from the browser. Tickets are only issued after Paystack confirms the payment, either when the buyer returns to the app or through Paystack's webhook if they do not. The host's share of the money is paid out in Sprint 6; until then all payments go to the Paystack account.
+
+### One-time setup
+
+1. **Database.** In the SQL Editor run [`supabase/006_tickets.sql`](supabase/006_tickets.sql).
+2. **Paystack.** Create an account at paystack.com (South Africa). In Settings, API Keys & Webhooks, keep **Test mode** on and copy the **test secret key** (`sk_test_...`).
+3. **Secret.** In Supabase, Edge Functions, Secrets, add `PAYSTACK_SECRET_KEY` with that key. (`APP_URL` is already set from Sprint 4.)
+4. **Functions.** Create two Edge Functions, each with its two files:
+   - `checkout`: [`index.ts` and `paystack.js`](supabase/functions/checkout/). Keep "Verify JWT" **on**.
+   - `paystack-webhook`: [`index.ts` and `paystack.js`](supabase/functions/paystack-webhook/). Turn "Verify JWT" **off**: Paystack cannot sign in, and the function checks Paystack's signature instead.
+5. **Webhook address.** In Paystack, Settings, API Keys & Webhooks, set the test **Webhook URL** to `https://tylodszndhehbiedlqjp.supabase.co/functions/v1/paystack-webhook`.
+
+Before taking real money: switch Paystack to live mode (it needs a registered business), replace the secret with the live key (`sk_live_...`) and set the live Webhook URL.
+
+Manual test cases for this sprint are in [docs/sprint-5-test-cases.md](docs/sprint-5-test-cases.md).
 
 ## Opening the app
 

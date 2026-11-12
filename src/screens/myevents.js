@@ -21,6 +21,12 @@ function eventRow(event) {
   }
   if (event.status === 'live') {
     lines.push(el('span', { class: 'event-row__meta', text: viewsLabel(event.view_count) }));
+    const types = Array.isArray(event.ticket_types) ? event.ticket_types : [];
+    if (types.length > 0) {
+      const sold = types.reduce((sum, type) => sum + type.sold, 0);
+      const total = types.reduce((sum, type) => sum + type.quantity, 0);
+      lines.push(el('span', { class: 'event-row__meta', text: `${sold} of ${total} tickets taken` }));
+    }
     const view = linkTo(`#/event/${event.id}`, 'View event');
     view.className = 'text-link event-row__link';
     lines.push(view);

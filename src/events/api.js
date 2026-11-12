@@ -58,7 +58,7 @@ export async function createEvent(userId, hostName, form) {
 /** The signed-in host's own events, newest first. */
 export async function listMyEvents(userId) {
   const client = await getClient();
-  const { data, error } = await client.from('events').select(COLUMNS).eq('host_id', userId).order('created_at', { ascending: false });
+  const { data, error } = await client.from('events').select(`${COLUMNS}, ticket_types(quantity, sold)`).eq('host_id', userId).order('created_at', { ascending: false });
   if (error) throw error;
   return data;
 }

@@ -13,7 +13,7 @@ test('an empty address shows Discover', () => {
 });
 
 test('named screens are understood', () => {
-  for (const screen of ['signup', 'signin', 'forgot', 'new-password', 'profile', 'my-events', 'new-event', 'review', 'feed', 'search', 'reminders']) {
+  for (const screen of ['signup', 'signin', 'forgot', 'new-password', 'profile', 'my-events', 'new-event', 'review', 'feed', 'search', 'reminders', 'tickets']) {
     assert.deepEqual(parseRoute(`#/${screen}`), { screen });
   }
 });
@@ -25,7 +25,7 @@ test('an item address opens its details', () => {
 });
 
 test('an unknown or malformed address falls back to Discover', () => {
-  const bad = ['#/home', '#/tickets', '#/signin/extra', '#/event', '#/event/', '#/event/Has Spaces', '#/event/UPPER',
+  const bad = ['#/home', '#/payments', '#/signin/extra', '#/event', '#/event/', '#/event/Has Spaces', '#/event/UPPER',
     '#/event/a/b', '#/admin/x', '#/event/-leading-dash', `#/event/${'x'.repeat(65)}`, '#access_token=abc', '#/event/<script>'];
   for (const hash of bad) assert.deepEqual(parseRoute(hash), { screen: 'discover' });
 });
@@ -77,6 +77,8 @@ test('only item and profile addresses are remembered for after log-in', () => {
   assert.equal(safeNext('#/profile'), '#/profile');
   assert.equal(safeNext('#/new-event'), '#/new-event');
   assert.equal(safeNext('#/reminders'), '#/reminders');
+  assert.equal(safeNext('#/tickets'), '#/tickets');
+  assert.equal(safeNext('#/order/3f2c1a9e-8b7d-4c6a-9e5f-0a1b2c3d4e5f'), '#/order/3f2c1a9e-8b7d-4c6a-9e5f-0a1b2c3d4e5f');
   assert.equal(safeNext('#/event/3f2c1a9e-8b7d-4c6a-9e5f-0a1b2c3d4e5f'), '#/event/3f2c1a9e-8b7d-4c6a-9e5f-0a1b2c3d4e5f');
   for (const bad of ['#/', '#/signin', '#/signup', '#/new-password', '#/event/Bad Id', 'https://evil.example/#/profile',
     '#/profile/extra', '//evil.example', 'javascript:alert(1)', '', null, undefined, 42]) {
@@ -115,4 +117,12 @@ test('findRole and isRole agree', () => {
   assert.equal(findRole('nobody'), undefined);
   assert.equal(isRole('artist'), true);
   assert.equal(isRole('nobody'), false);
+});
+
+test('an order address opens the order and needs a log-in', () => {
+  const id = '3f2c1a9e-8b7d-4c6a-9e5f-0a1b2c3d4e5f';
+  assert.deepEqual(parseRoute(`#/order/${id}`), { screen: 'order', id });
+  assert.deepEqual(parseRoute(hashFor({ screen: 'order', id })), { screen: 'order', id });
+  assert.deepEqual(resolveRoute({ screen: 'order', id }, false), { screen: 'signin' });
+  for (const bad of ['#/order/', '#/order/abc', '#/order/3F2C1A9E-8B7D-4C6A-9E5F-0A1B2C3D4E5F']) assert.deepEqual(parseRoute(bad), { screen: 'discover' });
 });

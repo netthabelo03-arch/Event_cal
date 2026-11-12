@@ -8,15 +8,18 @@
 const DISCOVER = { screen: 'discover' };
 
 /** Screens whose address is just their name, like "#/signin". */
-const NAMED_SCREENS = ['signup', 'signin', 'forgot', 'new-password', 'profile', 'my-events', 'new-event', 'review', 'feed', 'search', 'reminders'];
+const NAMED_SCREENS = ['signup', 'signin', 'forgot', 'new-password', 'profile', 'my-events', 'new-event', 'review', 'feed', 'search', 'reminders', 'tickets'];
 
 /** The kinds of item that have a details screen. */
 export const ITEM_KINDS = ['event', 'host', 'artist'];
 
 const ITEM_ID = /^[a-z0-9][a-z0-9-]{0,63}$/;
 
+/** An order's id is a UUID. */
+const ORDER_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
 /** Screens that only a signed-in person may open. */
-export const PROTECTED_SCREENS = ['detail', 'profile', 'new-password', 'my-events', 'new-event', 'review', 'reminders'];
+export const PROTECTED_SCREENS = ['detail', 'profile', 'new-password', 'my-events', 'new-event', 'review', 'reminders', 'tickets', 'order'];
 
 /** Screens that make no sense once signed in. */
 export const GUEST_SCREENS = ['signup', 'signin', 'forgot'];
@@ -38,6 +41,9 @@ export function parseRoute(hash) {
   const parts = String(hash ?? '').replace(/^#/, '').split('/').filter(Boolean);
   if (parts.length === 1 && NAMED_SCREENS.includes(parts[0])) {
     return { screen: parts[0] };
+  }
+  if (parts.length === 2 && parts[0] === 'order' && ORDER_ID.test(parts[1])) {
+    return { screen: 'order', id: parts[1] };
   }
   if (parts.length === 2 && ITEM_KINDS.includes(parts[0]) && ITEM_ID.test(parts[1])) {
     return { screen: 'detail', kind: parts[0], id: parts[1] };
@@ -61,6 +67,7 @@ export function resolveRoute(route, signedIn) {
 export function hashFor(route) {
   if (route.screen === 'discover') return '#/';
   if (route.screen === 'detail') return `#/${route.kind}/${route.id}`;
+  if (route.screen === 'order') return `#/order/${route.id}`;
   return `#/${route.screen}`;
 }
 

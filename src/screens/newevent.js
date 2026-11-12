@@ -4,6 +4,8 @@
 import { MAX_CLIP_SECONDS, PREVIEW_SECONDS } from '../rules/clip.js';
 import { CATEGORIES, CLIP_TYPES, checkClip, checkEvent } from '../events/rules.js';
 import { createEvent } from '../events/api.js';
+import { addTicketTypes } from '../tickets/api.js';
+import { ticketEditor } from '../tickets/editor.js';
 import { friendlyAuthError } from '../auth/errors.js';
 import { loadViewer } from '../viewer.js';
 import { topBar } from '../usermenu.js';
@@ -95,6 +97,8 @@ export async function renderNewEvent({ session, navigate }) {
   const description = el('textarea', { id: 'description', class: 'input input--area', rows: '4' });
   const descriptionError = errorLine();
 
+  const tickets = ticketEditor();
+
   const message = messageBox();
   const submit = el('button', { type: 'submit', class: 'button button--primary', text: 'Submit for review' });
 
@@ -116,6 +120,7 @@ export async function renderNewEvent({ session, navigate }) {
       el('label', { for: 'description', class: 'field__label', text: 'Description (optional)' }),
       description, descriptionError.node,
     ]),
+    tickets.node,
     message.node,
     el('div', { class: 'push-down' }, [submit]),
   ]);
@@ -140,18 +145,25 @@ export async function renderNewEvent({ session, navigate }) {
     venue.setError(errors.venue ?? null);
     categoryError.set(errors.category ?? null);
     descriptionError.set(errors.description ?? null);
-    if (!ok) {
+    const ticketCheck = tickets.check();
+    if (!ok || !ticketCheck.ok) {
       message.show('Fix the highlighted fields and try again.');
       return;
     }
 
     await whileBusy(submit, 'Uploading your clip…', async () => {
       try {
-        await createEvent(session.user.id, profile.full_name, values);
+        const saved = await createEvent(session.user.id, profile.full_name, values);
+        let ticketNote = '';
+        try {
+          await addTicketTypes(saved.id, ticketCheck.types);
+        } catch {
+          ticketNote = ' Your ticket types could not be saved; ask an admin for help before the event goes live.';
+        }
         heading.textContent = 'Your event is submitted';
         form.replaceWith(
           el('div', { class: 'stack' }, [
-            el('p', { class: 'lead', text: 'We will check the clip, then it goes live in Discover. You can follow its status in My events.' }),
+            el('p', { class: 'lead', text: `We will check the clip, then it goes live in Discover. You can follow its status in My events.${ticketNote}` }),
             el('a', { href: '#/my-events', class: 'button button--primary', text: 'Go to my events' }),
           ]),
         );

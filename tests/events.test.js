@@ -95,13 +95,13 @@ test('real event ids are told apart from sample ids', () => {
 
 test('the menu shows My reminders to everyone, My events to hosts and the review queue to admins', () => {
   const texts = (profile, admin) => menuLinks(profile, admin).map((link) => link.text);
-  assert.deepEqual(texts({ role: 'goer' }, false), ['Profile', 'My reminders']);
-  assert.deepEqual(texts({ role: 'host' }, false), ['Profile', 'My reminders', 'My events']);
-  assert.deepEqual(texts({ role: 'artist' }, false), ['Profile', 'My reminders']);
-  assert.deepEqual(texts({ role: 'goer' }, true), ['Profile', 'My reminders', 'Review queue']);
-  assert.deepEqual(texts({ role: 'host' }, true), ['Profile', 'My reminders', 'My events', 'Review queue']);
-  assert.deepEqual(texts(null, false), ['Profile', 'My reminders']);
-  assert.deepEqual(texts({ role: 'goer' }, 'yes'), ['Profile', 'My reminders']);
+  assert.deepEqual(texts({ role: 'goer' }, false), ['Profile', 'My tickets', 'My reminders']);
+  assert.deepEqual(texts({ role: 'host' }, false), ['Profile', 'My tickets', 'My reminders', 'My events']);
+  assert.deepEqual(texts({ role: 'artist' }, false), ['Profile', 'My tickets', 'My reminders']);
+  assert.deepEqual(texts({ role: 'goer' }, true), ['Profile', 'My tickets', 'My reminders', 'Review queue']);
+  assert.deepEqual(texts({ role: 'host' }, true), ['Profile', 'My tickets', 'My reminders', 'My events', 'Review queue']);
+  assert.deepEqual(texts(null, false), ['Profile', 'My tickets', 'My reminders']);
+  assert.deepEqual(texts({ role: 'goer' }, 'yes'), ['Profile', 'My tickets', 'My reminders']);
 });
 
 test('database and storage errors get a clear message', () => {

@@ -7,6 +7,7 @@ import { noteView, upcomingLabel } from '../events/discovery.js';
 import { eventCard } from '../events/cards.js';
 import { hasReminder, addReminder, removeReminder } from '../reminders/api.js';
 import { phonePanel } from '../reminders/panel.js';
+import { ticketsBox } from '../tickets/box.js';
 import { autoplayFull } from '../events/preview.js';
 import { MAX_CLIP_SECONDS } from '../rules/clip.js';
 import { CATEGORIES, formatWhen, isEventId, statusOf } from '../events/rules.js';
@@ -116,7 +117,7 @@ async function reminderBox(userId, eventId) {
   return box;
 }
 
-async function realEvent(id, viewerId) {
+async function realEvent(id, viewerId, navigate) {
   let event;
   try {
     event = await getEvent(id);
@@ -153,22 +154,23 @@ async function realEvent(id, viewerId) {
   );
   if (event.description) parts.push(el('p', { class: 'detail__text', text: event.description }));
   if (event.status === 'live' && Date.parse(event.starts_at) > Date.now()) {
+    const tickets = await ticketsBox(event, navigate);
+    if (tickets) parts.push(tickets);
     parts.push(await reminderBox(viewerId, event.id));
   }
-  parts.push(el('p', { class: 'notice', text: 'Tickets arrive in Sprint 5.' }));
   // Count the view, except the host's own visits and visits not yet live.
   if (event.status === 'live' && event.host_id !== viewerId) countView(event.id);
   return parts;
 }
 
-export async function renderDetail({ session, kind, id }) {
+export async function renderDetail({ session, kind, id, navigate }) {
   const { profile, admin } = await loadViewer(session);
   const back = linkTo('#/', 'Back to Discover');
   back.className = 'text-link';
   const bar = topBar({ profile, session, admin });
 
   if (kind === 'event' && isEventId(id)) {
-    return [bar, back, ...(await realEvent(id, session.user.id))];
+    return [bar, back, ...(await realEvent(id, session.user.id, navigate))];
   }
   if (kind === 'host' && isEventId(id)) {
     return [bar, back, ...(await realHost(id))];

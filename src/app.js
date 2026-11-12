@@ -18,6 +18,8 @@ import { renderReview } from './screens/review.js';
 import { renderFeed } from './screens/feed.js';
 import { renderSearch } from './screens/search.js';
 import { renderReminders } from './screens/reminders.js';
+import { renderTickets } from './screens/tickets.js';
+import { renderOrder } from './screens/order.js';
 import { forgetViewer } from './viewer.js';
 
 const SCREENS = {
@@ -34,6 +36,8 @@ const SCREENS = {
   feed: renderFeed,
   search: renderSearch,
   reminders: renderReminders,
+  tickets: renderTickets,
+  order: renderOrder,
 };
 
 const root = document.getElementById('app');
@@ -90,7 +94,18 @@ async function show() {
   window.scrollTo(0, 0);
 }
 
+/**
+ * Paystack sends the buyer back to the app's address with "?order=<id>".
+ * Turn that into the order screen and tidy the address bar.
+ */
+function arriveFromPayment() {
+  const order = new URLSearchParams(window.location.search).get('order');
+  if (!order || !/^[0-9a-f-]{36}$/.test(order)) return;
+  window.history.replaceState(null, '', `${window.location.pathname}#/order/${order}`);
+}
+
 async function start() {
+  arriveFromPayment();
   root.replaceChildren(...loadingScreen());
   try {
     session = await currentSession();
