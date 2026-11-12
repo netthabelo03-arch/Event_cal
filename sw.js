@@ -2,7 +2,7 @@
 // It always tries the network first, so people get the newest version,
 // and only falls back to the saved copy when there is no connection.
 
-const CACHE = 'event-cal-shell-v4';
+const CACHE = 'event-cal-shell-v5';
 
 self.addEventListener('install', () => {
   self.skipWaiting();
@@ -47,8 +47,8 @@ self.addEventListener('push', (event) => {
   const title = typeof data.title === 'string' ? data.title : 'plusespot';
   event.waitUntil(self.registration.showNotification(title, {
     body: typeof data.body === 'string' ? data.body : '',
-    icon: 'icons/icon.svg',
-    badge: 'icons/icon.svg',
+    icon: 'icons/icon-192.png',
+    badge: 'icons/icon-192.png',
     data: { url: typeof data.url === 'string' ? data.url : self.registration.scope },
   }));
 });

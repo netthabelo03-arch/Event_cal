@@ -23,11 +23,16 @@ export function icon(paths, size = 24) {
   return wrapper.firstElementChild;
 }
 
-export const LOGO_PATHS = '<rect x="3" y="5" width="18" height="16" rx="3"></rect><path d="M3 10h18M8 3v4M16 3v4"></path><path d="M10.5 13.5v4l3.5-2z"></path>';
+/** The plusespot logo: a map pin with a pulse line, and the spot it marks. */
+export const LOGO_SVG = '<svg aria-hidden="true" class="brand__mark" width="32" height="36" viewBox="130 86 252 368">'
+  + '<path d="M256 404C206 344 140 292 140 212a116 116 0 0 1 232 0c0 80-66 132-116 192z" fill="#c6f432"></path>'
+  + '<path d="M188 212h38l18-40 26 82 16-42h38" fill="none" stroke="#0e1210" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"></path>'
+  + '<ellipse cx="256" cy="438" rx="50" ry="11" fill="none" stroke="#c6f432" stroke-width="8"></ellipse></svg>';
 
 export function brand() {
-  const mark = icon(LOGO_PATHS, 32);
-  mark.style.color = 'var(--color-accent)';
+  const holder = document.createElement('span');
+  holder.innerHTML = LOGO_SVG;
+  const mark = holder.firstElementChild;
   return el('a', { class: 'brand', href: '#/', 'aria-label': 'plusespot, go to Discover' }, [mark, el('span', { class: 'brand__name', text: 'plusespot' })]);
 }
 

@@ -844,3 +844,6 @@ body.full .app { max-width: none; padding: 0; gap: 0; }
 /* Less motion: slides still change when asked, but without the swing. */
 .spotlight--still .spotlight__slide { transition: none; }
 @media (prefers-reduced-motion: reduce) { .spotlight__slide { transition: none; } }
+
+/* The plusespot logo in the top bar. */
+.brand__mark { display: block; flex: none; width: 30px; height: 34px; }
