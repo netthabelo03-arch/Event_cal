@@ -1,8 +1,6 @@
 // Turns the part of the address after "#" into a screen to show,
 // and decides which screens need a signed-in person.
-// Example addresses: "#/" (welcome), "#/signup/host", "#/signin", "#/home".
-
-import { isRole } from './roles.js';
+// Example addresses: "#/" (welcome and sign-up), "#/signin", "#/home".
 
 const WELCOME = { screen: 'welcome' };
 
@@ -13,22 +11,17 @@ const NAMED_SCREENS = ['signin', 'forgot', 'new-password', 'home', 'profile'];
 export const PROTECTED_SCREENS = ['home', 'profile', 'new-password'];
 
 /** Screens that make no sense once signed in. */
-export const GUEST_SCREENS = ['welcome', 'signup', 'signin', 'forgot'];
+export const GUEST_SCREENS = ['welcome', 'signin', 'forgot'];
 
 /** Screens that get the moving panel beside them on big screens. */
 export const SHOWCASE_SCREENS = [...GUEST_SCREENS, 'new-password'];
 
 /**
- * @param {string} hash the address hash, for example "#/signup/host"
- * @returns {{ screen: string, roleId?: string | null }}
+ * @param {string} hash the address hash, for example "#/signin"
+ * @returns {{ screen: string }}
  */
 export function parseRoute(hash) {
   const parts = String(hash ?? '').replace(/^#/, '').split('/').filter(Boolean);
-  if (parts[0] === 'signup') {
-    if (parts.length === 1) return { screen: 'signup', roleId: null };
-    if (parts.length === 2 && isRole(parts[1])) return { screen: 'signup', roleId: parts[1] };
-    return WELCOME;
-  }
   if (parts.length === 1 && NAMED_SCREENS.includes(parts[0])) {
     return { screen: parts[0] };
   }
@@ -49,7 +42,5 @@ export function resolveRoute(route, signedIn) {
 
 /** @returns {string} the address hash for a route */
 export function hashFor(route) {
-  if (route.screen === 'welcome') return '#/';
-  if (route.screen === 'signup' && route.roleId) return `#/signup/${route.roleId}`;
-  return `#/${route.screen}`;
+  return route.screen === 'welcome' ? '#/' : `#/${route.screen}`;
 }

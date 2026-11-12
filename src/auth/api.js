@@ -27,16 +27,17 @@ export async function onAuthChange(listener) {
 }
 
 /**
- * Create an account.
+ * Create an account. Everyone starts as a Goer with no name yet;
+ * both can be changed later in the profile.
  * @returns {Promise<{ needsEmailConfirmation: boolean }>}
  */
-export async function signUp({ fullName, email, password, role }) {
+export async function signUp({ email, password }) {
   const client = await getClient();
   const { data, error } = await client.auth.signUp({
     email: cleanEmail(email),
     password,
     options: {
-      data: { full_name: String(fullName).trim(), role },
+      data: { role: 'goer' },
       emailRedirectTo: appUrl(),
     },
   });

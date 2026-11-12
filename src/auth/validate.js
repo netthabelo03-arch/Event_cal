@@ -33,20 +33,21 @@ export function checkRole(value) {
   return isRole(value) ? null : 'Choose how you will use the app.';
 }
 
+/** A name is optional (it can be added later), but if given it must be sensible. */
+export function checkOptionalName(value) {
+  return String(value ?? '').trim().length === 0 ? null : checkName(value);
+}
+
 /**
- * Check a whole sign-up form.
+ * Check the sign-up form: just an email and a password.
  * @returns {{ ok: boolean, errors: Record<string, string> }} errors keyed by field name
  */
-export function checkSignUp({ fullName, email, password, role, agreed }) {
+export function checkSignUp({ email, password }) {
   const errors = {};
-  const add = (field, message) => {
-    if (message) errors[field] = message;
-  };
-  add('fullName', checkName(fullName));
-  add('email', checkEmail(email));
-  add('password', checkPassword(password));
-  add('role', checkRole(role));
-  if (agreed !== true) errors.agreed = 'Agree to the Terms and Privacy Policy to continue.';
+  const emailError = checkEmail(email);
+  const passwordError = checkPassword(password);
+  if (emailError) errors.email = emailError;
+  if (passwordError) errors.password = passwordError;
   return { ok: Object.keys(errors).length === 0, errors };
 }
 

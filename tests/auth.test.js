@@ -1,11 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { checkName, checkEmail, checkPassword, checkRole, checkSignUp, cleanEmail, MIN_PASSWORD_LENGTH } from '../src/auth/validate.js';
+import { checkName, checkOptionalName, checkEmail, checkPassword, checkRole, checkSignUp, cleanEmail, MIN_PASSWORD_LENGTH } from '../src/auth/validate.js';
 import { friendlyAuthError, GENERIC_ERROR, OFFLINE_ERROR } from '../src/auth/errors.js';
 
-const GOOD = { fullName: 'Thabo Nkosi', email: 'thabo@example.com', password: 'long-enough-1', role: 'host', agreed: true };
+const GOOD = { email: 'thabo@example.com', password: 'long-enough-1' };
 
-test('a complete sign-up form passes', () => {
+test('sign-up needs only an email and a password', () => {
   assert.deepEqual(checkSignUp(GOOD), { ok: true, errors: {} });
 });
 
@@ -31,15 +31,16 @@ test('only the three roles are accepted, never admin', () => {
   for (const bad of ['admin', 'Goer', '', null, undefined]) assert.notEqual(checkRole(bad), null);
 });
 
-test('each wrong field gets its own error', () => {
-  const { ok, errors } = checkSignUp({ fullName: '', email: 'nope', password: 'short', role: 'admin', agreed: false });
+test('each wrong sign-up field gets its own error', () => {
+  const { ok, errors } = checkSignUp({ email: 'nope', password: 'short' });
   assert.equal(ok, false);
-  assert.deepEqual(Object.keys(errors).sort(), ['agreed', 'email', 'fullName', 'password', 'role']);
+  assert.deepEqual(Object.keys(errors).sort(), ['email', 'password']);
+  assert.deepEqual(Object.keys(checkSignUp({ ...GOOD, password: '' }).errors), ['password']);
 });
 
-test('the terms must be agreed to', () => {
-  assert.equal(checkSignUp({ ...GOOD, agreed: false }).ok, false);
-  assert.equal(checkSignUp({ ...GOOD, agreed: 'yes' }).ok, false);
+test('a name can be left empty in the profile, but not be a single letter', () => {
+  for (const fine of ['', '   ', null, undefined, 'Thabo Nkosi']) assert.equal(checkOptionalName(fine), null);
+  for (const bad of ['A', 'x'.repeat(81)]) assert.notEqual(checkOptionalName(bad), null);
 });
 
 test('emails are trimmed and lower-cased before sending', () => {

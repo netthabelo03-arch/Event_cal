@@ -3,7 +3,7 @@
 
 import { ROLES } from '../roles.js';
 import { getProfile, updateProfile } from '../auth/api.js';
-import { checkName } from '../auth/validate.js';
+import { checkOptionalName } from '../auth/validate.js';
 import { friendlyAuthError } from '../auth/errors.js';
 import { topBar } from '../usermenu.js';
 import { el, field, messageBox, linkTo, whileBusy } from '../dom.js';
@@ -48,7 +48,7 @@ export async function renderProfile({ session }) {
   }
   updateRole();
 
-  const name = field({ id: 'full-name', label: 'Full name', autocomplete: 'name', value: profile.full_name });
+  const name = field({ id: 'full-name', label: 'Your name (optional)', autocomplete: 'name', value: profile.full_name });
   const save = el('button', { type: 'submit', class: 'button button--primary', text: 'Save changes' });
 
   const form = el('form', { class: 'form', novalidate: '' }, [
@@ -64,7 +64,7 @@ export async function renderProfile({ session }) {
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     message.clear();
-    const nameError = checkName(name.input.value);
+    const nameError = checkOptionalName(name.input.value);
     name.setError(nameError);
     if (nameError) return;
 

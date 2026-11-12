@@ -45,28 +45,28 @@ Plain HTML, CSS and JavaScript. There is no framework and nothing to install.
 | `src/app.css` | Layout and controls shared by every screen |
 | `src/theme/tokens.css` | The green and black colours every screen uses |
 | `src/app.js` | Starts the app and shows the right screen |
+| `src/usermenu.js` | The top bar with the person's name, Profile and Log out |
 | `src/router.js` | Works out which screen an address means |
-| `src/roles.js` | The list of roles; add a role here and it appears on the welcome screen |
+| `src/roles.js` | The list of roles; add a role here and it appears in the profile |
 | `src/screens/` | One file per screen |
 | `src/auth/` | Accounts: form checks, error messages and the calls to Supabase |
 | `src/config.js` | The Supabase project address and publishable key |
 | `supabase/` | Database setup scripts, run once in the Supabase dashboard |
 | `src/rules/` | Product rules: clip length and the host fee |
-| `src/storage.js` | Remembers the chosen role on the device |
 | `sw.js`, `manifest.webmanifest` | Let people add the app to their home screen |
 | `tests/` | Automated tests |
 | `docs/defect-log.md` | The defect log |
 
 ## What works so far (Sprints 0 and 1)
 
-- The welcome screen, where a person picks Goer, Host or Artist.
-- Sign up, sign in, forgot password, profile and log out.
+- A first screen that creates an account with an email and a password.
+- Sign in, forgot password, profile (name and role) and log out from the menu under the person's name.
 - A home screen that greets the signed-in person by name and role, saying which sprint brings the real one.
 - The app can be added to a phone's home screen.
 
 ## Accounts (Sprint 1)
 
-People sign up with a name, email and password as a Goer, Host or Artist, and can sign in, reset a forgotten password, change their name or role, and log out. Accounts and profiles are kept in Supabase.
+People sign up with just an email and a password and are let straight in as a Goer. Their name, and switching to Host or Artist, are optional steps in the profile. They can also sign in, reset a forgotten password and log out. Accounts and profiles are kept in Supabase.
 
 One-time setup in the Supabase dashboard:
 

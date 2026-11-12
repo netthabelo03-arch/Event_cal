@@ -5,7 +5,7 @@ import { findRole } from '../roles.js';
 import { getProfile } from '../auth/api.js';
 import { friendlyAuthError } from '../auth/errors.js';
 import { topBar } from '../usermenu.js';
-import { el } from '../dom.js';
+import { el, linkTo } from '../dom.js';
 
 const COMING = {
   goer: 'The Discover feed arrives in Sprint 3.',
@@ -37,15 +37,25 @@ export async function renderHome({ session }) {
   }
 
   const role = findRole(profile.role);
-  const firstName = profile.full_name.trim().split(/\s+/)[0] || role.name;
+  const firstName = profile.full_name.trim().split(/\s+/)[0];
 
-  return [
+  const content = [
     topBar({ profile, session }),
     el('div', { class: 'stack' }, [
       el('p', { class: 'caption', text: role.name }),
-      el('h1', { class: 'title', text: `Welcome, ${firstName}.` }),
+      el('h1', { class: 'title', text: firstName ? `Welcome, ${firstName}.` : 'Welcome.' }),
       el('p', { class: 'lead', text: role.about }),
     ]),
     el('p', { class: 'notice', text: COMING[role.id] ?? 'More is on the way.' }),
   ];
+
+  if (role.id === 'goer') {
+    // Everyone starts as a Goer; this is the way to become a Host or an Artist.
+    content.push(el('p', { class: 'link-row' }, [
+      'Hosting an event or making music? ',
+      linkTo('#/profile', 'Switch to Host or Artist'),
+    ]));
+  }
+
+  return content;
 }

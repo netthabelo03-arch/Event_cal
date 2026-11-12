@@ -15,15 +15,8 @@ test('named screens are understood', () => {
   }
 });
 
-test('sign-up works with or without a role', () => {
-  assert.deepEqual(parseRoute('#/signup'), { screen: 'signup', roleId: null });
-  for (const role of ROLES) {
-    assert.deepEqual(parseRoute(`#/signup/${role.id}`), { screen: 'signup', roleId: role.id });
-  }
-});
-
-test('an unknown role or address falls back to the welcome screen', () => {
-  for (const hash of ['#/signup/admin', '#/signup/goer/extra', '#/home/goer', '#/tickets', '#/signin/extra', '#access_token=abc']) {
+test('an unknown address falls back to the welcome screen', () => {
+  for (const hash of ['#/signup', '#/signup/host', '#/home/goer', '#/tickets', '#/signin/extra', '#access_token=abc']) {
     assert.deepEqual(parseRoute(hash), { screen: 'welcome' });
   }
 });
@@ -41,7 +34,8 @@ test('a signed-in person is sent home from every guest screen', () => {
 });
 
 test('allowed routes are left alone', () => {
-  assert.deepEqual(resolveRoute({ screen: 'signup', roleId: 'host' }, false), { screen: 'signup', roleId: 'host' });
+  assert.deepEqual(resolveRoute({ screen: 'welcome' }, false), { screen: 'welcome' });
+  assert.deepEqual(resolveRoute({ screen: 'signin' }, false), { screen: 'signin' });
   assert.deepEqual(resolveRoute({ screen: 'profile' }, true), { screen: 'profile' });
 });
 
@@ -50,16 +44,9 @@ test('every screen is either protected or for guests, never both', () => {
 });
 
 test('an address made by hashFor is read back as the same route', () => {
-  const routes = [
-    { screen: 'welcome' },
-    { screen: 'signin' },
-    { screen: 'home' },
-    { screen: 'profile' },
-    { screen: 'new-password' },
-    { screen: 'signup', roleId: 'artist' },
-  ];
-  for (const route of routes) assert.deepEqual(parseRoute(hashFor(route)), route);
-  assert.deepEqual(parseRoute(hashFor({ screen: 'signup', roleId: null })), { screen: 'signup', roleId: null });
+  for (const screen of ['welcome', 'signin', 'forgot', 'home', 'profile', 'new-password']) {
+    assert.deepEqual(parseRoute(hashFor({ screen })), { screen });
+  }
 });
 
 test('the three launch roles are Goer, Host and Artist', () => {
@@ -86,7 +73,7 @@ test('findRole and isRole agree', () => {
 });
 
 test('the moving panel shows beside the sign-in screens only', () => {
-  for (const screen of ['welcome', 'signup', 'signin', 'forgot', 'new-password']) {
+  for (const screen of ['welcome', 'signin', 'forgot', 'new-password']) {
     assert.equal(SHOWCASE_SCREENS.includes(screen), true);
   }
   for (const screen of ['home', 'profile']) {

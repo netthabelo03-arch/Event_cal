@@ -5,7 +5,6 @@ import { parseRoute, resolveRoute, hashFor, SHOWCASE_SCREENS } from './router.js
 import { currentSession, onAuthChange } from './auth/api.js';
 import { el, brand } from './dom.js';
 import { renderWelcome } from './screens/welcome.js';
-import { renderSignUp } from './screens/signup.js';
 import { renderSignIn } from './screens/signin.js';
 import { renderForgot } from './screens/forgot.js';
 import { renderNewPassword } from './screens/newpassword.js';
@@ -14,7 +13,6 @@ import { renderProfile } from './screens/profile.js';
 
 const SCREENS = {
   welcome: renderWelcome,
-  signup: renderSignUp,
   signin: renderSignIn,
   forgot: renderForgot,
   'new-password': renderNewPassword,
@@ -50,7 +48,7 @@ async function show() {
   // Screens that fetch data are slow; if the person moves on meanwhile,
   // only the newest screen may be drawn.
   const thisRender = ++latestRender;
-  const pending = SCREENS[route.screen]({ session, navigate, roleId: route.roleId });
+  const pending = SCREENS[route.screen]({ session, navigate });
   if (pending instanceof Promise) root.replaceChildren(...loadingScreen());
 
   let content;

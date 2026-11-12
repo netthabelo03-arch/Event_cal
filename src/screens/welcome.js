@@ -1,59 +1,62 @@
-// Welcome screen: pick how you will use the app, then create an account.
+// First screen for a signed-out person: create an account with just an email
+// and a password. Everyone starts as a Goer; becoming a Host or Artist, and
+// adding a name, happen later in the profile.
 
-import { ROLES } from '../roles.js';
-import { hashFor } from '../router.js';
-import { loadRole, saveRole } from '../storage.js';
-import { el, icon, brand, linkTo } from '../dom.js';
+import { signUp } from '../auth/api.js';
+import { checkSignUp } from '../auth/validate.js';
+import { friendlyAuthError } from '../auth/errors.js';
+import { el, brand, field, messageBox, linkTo, whileBusy } from '../dom.js';
 
-export function renderWelcome({ navigate }) {
-  let chosen = loadRole();
-  if (!ROLES.some((role) => role.id === chosen)) chosen = null;
+export function renderWelcome() {
+  const email = field({ id: 'email', label: 'Email address', type: 'email', autocomplete: 'email' });
+  const password = field({ id: 'password', label: 'Password (at least 8 characters)', type: 'password', autocomplete: 'new-password' });
+  const message = messageBox();
+  const submit = el('button', { type: 'submit', class: 'button button--primary', text: 'Get started' });
 
-  const continueButton = el('button', { type: 'button', class: 'button button--primary', text: 'Continue' });
-
-  const cards = ROLES.map((role) => {
-    const card = el('button', { type: 'button', class: 'role-card', 'aria-pressed': 'false' }, [
-      el('span', { class: 'role-card__icon' }, [icon(role.icon)]),
-      el('span', { class: 'role-card__text' }, [
-        el('span', { class: 'role-card__name', text: role.name }),
-        el('span', { class: 'role-card__about', text: role.about }),
-      ]),
-    ]);
-    card.addEventListener('click', () => {
-      chosen = role.id;
-      update();
-    });
-    return { role, card };
-  });
-
-  function update() {
-    for (const { role, card } of cards) {
-      card.setAttribute('aria-pressed', String(role.id === chosen));
-    }
-    continueButton.disabled = chosen === null;
-  }
-
-  continueButton.addEventListener('click', () => {
-    if (chosen === null) return;
-    saveRole(chosen);
-    navigate(hashFor({ screen: 'signup', roleId: chosen }));
-  });
-
-  update();
-
-  return [
-    brand(),
-    el('div', { class: 'stack' }, [
-      el('h1', { class: 'title', text: "Never miss what's on." }),
-      el('p', { class: 'lead', text: 'Watch short event clips, set a reminder, show up.' }),
-    ]),
-    el('div', { class: 'stack' }, [
-      el('p', { class: 'caption', text: 'How will you use the app?' }),
-      ...cards.map(({ card }) => card),
-    ]),
+  const form = el('form', { class: 'form', novalidate: '' }, [
+    email.node,
+    password.node,
+    message.node,
     el('div', { class: 'push-down stack' }, [
-      continueButton,
+      submit,
+      el('p', { class: 'link-row', text: 'By continuing you agree to the Terms and Privacy Policy.' }),
       el('p', { class: 'link-row' }, ['Already have an account? ', linkTo('#/signin', 'Sign in')]),
     ]),
-  ];
+  ]);
+
+  const intro = el('div', { class: 'stack' }, [
+    el('h1', { class: 'title', text: "Never miss what's on." }),
+    el('p', { class: 'lead', text: 'Create your free account in seconds.' }),
+  ]);
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    message.clear();
+    const values = { email: email.input.value, password: password.input.value };
+    const { ok, errors } = checkSignUp(values);
+    email.setError(errors.email ?? null);
+    password.setError(errors.password ?? null);
+    if (!ok) return;
+
+    await whileBusy(submit, 'Creating your account…', async () => {
+      try {
+        const { needsEmailConfirmation } = await signUp(values);
+        if (needsEmailConfirmation) {
+          // Only happens while "Confirm email" is switched on in Supabase.
+          intro.replaceWith(
+            el('div', { class: 'stack' }, [
+              el('h1', { class: 'title', text: 'One last step' }),
+              el('p', { class: 'lead', text: `We sent a link to ${values.email.trim()}. Open it and you are in.` }),
+            ]),
+          );
+          form.replaceWith(el('p', { class: 'link-row' }, ['Opened it already? ', linkTo('#/signin', 'Sign in')]));
+        }
+        // Otherwise the person is signed in at once and the app opens home by itself.
+      } catch (error) {
+        message.show(friendlyAuthError(error));
+      }
+    });
+  });
+
+  return [brand(), intro, form];
 }
