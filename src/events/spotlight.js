@@ -31,13 +31,13 @@ export function offsetFrom(index, active, count) {
 export function poseFor(offset) {
   const distance = Math.abs(offset);
   const side = Math.sign(offset);
-  if (distance > SIDE) return { x: side * 1.4, z: -520, rotate: -side * 60, scale: 0.7, opacity: 0, hidden: true };
+  if (distance > SIDE) return { x: side * 1.9, z: -520, rotate: -side * 60, scale: 0.7, opacity: 0, hidden: true };
   return {
-    x: side * (distance === 0 ? 0 : 0.42 + (distance - 1) * 0.36),
+    x: side * (distance === 0 ? 0 : 0.78 + (distance - 1) * 0.5),
     z: distance === 0 ? 0 : -distance * 220,
-    rotate: distance === 0 ? 0 : -side * Math.min(distance * 38, 60),
-    scale: 1 - distance * 0.08,
-    opacity: distance === 0 ? 1 : distance === 1 ? 0.75 : 0.4,
+    rotate: distance === 0 ? 0 : -side * Math.min(distance * 42, 60),
+    scale: 1 - distance * 0.06,
+    opacity: distance === 0 ? 1 : distance === 1 ? 0.8 : 0.45,
     hidden: false,
   };
 }

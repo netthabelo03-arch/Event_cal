@@ -723,12 +723,12 @@ body.full .app { max-width: none; padding: 0; gap: 0; }
 .spotlight__slide {
   position: absolute;
   left: 50%;
-  top: 24px;
+  top: 16px;
   width: 210px;
   height: 330px;
   margin-left: -105px;
   transform-style: preserve-3d;
-  transition: transform 700ms cubic-bezier(.2,.8,.2,1), opacity 700ms ease;
+  transition: transform 700ms cubic-bezier(.2,.8,.2,1), opacity 700ms ease, filter 700ms ease;
   cursor: pointer;
   will-change: transform;
 }
@@ -747,9 +747,9 @@ body.full .app { max-width: none; padding: 0; gap: 0; }
   background: #000;
   border: 1px solid var(--color-line-strong);
   box-shadow: 0 30px 60px -20px rgb(0 0 0 / 0.9);
-  /* A soft reflection on the floor below the card. */
-  -webkit-box-reflect: below 6px linear-gradient(transparent 70%, rgb(255 255 255 / 0.12));
 }
+/* Side cards are darker so the front one stands out. */
+.spotlight__slide:not(.spotlight__slide--front) .spotlight__card { filter: brightness(0.6); }
 .spotlight__card:hover { color: var(--color-text); }
 .spotlight__slide--front .spotlight__card { border-color: var(--color-accent); box-shadow: 0 30px 70px -18px rgb(34 197 94 / 0.45); }
 .spotlight__art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }

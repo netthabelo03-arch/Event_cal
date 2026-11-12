@@ -27,5 +27,5 @@ test('the front slide faces the viewer; side slides turn away and step back', ()
 
 test('poses become a CSS transform', () => {
   assert.equal(transformFor(poseFor(0)), 'translateX(0.0%) translateZ(0px) rotateY(0deg) scale(1)');
-  assert.match(transformFor(poseFor(1)), /^translateX\(42\.0%\) translateZ\(-220px\) rotateY\(-38deg\) scale\(0\.92\)$/);
+  assert.match(transformFor(poseFor(1)), /^translateX\(78\.0%\) translateZ\(-220px\) rotateY\(-42deg\) scale\(0\.94\)$/);
 });
