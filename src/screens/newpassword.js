@@ -26,7 +26,7 @@ export function renderNewPassword({ navigate }) {
     await whileBusy(submit, 'Saving…', async () => {
       try {
         await setNewPassword(password.input.value);
-        navigate('#/home');
+        navigate('#/');
       } catch (error) {
         message.show(friendlyAuthError(error));
       }

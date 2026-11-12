@@ -291,3 +291,65 @@ a.button--quiet:hover { color: var(--color-text); }
 @media (prefers-reduced-motion: reduce) {
   .showcase__glow { animation: none; }
 }
+
+/* Discover and item details: open browsing, full width on big screens. */
+.brand { color: inherit; text-decoration: none; }
+.brand:hover { color: inherit; }
+
+.topbar__actions { display: flex; align-items: center; gap: 16px; }
+.topbar__link { font-weight: 600; font-size: 15px; color: var(--color-text-soft); text-decoration: none; padding: 12px 4px; }
+.topbar__link:hover { color: var(--color-text); }
+.button--small { width: auto; min-height: var(--touch-target); padding: 0 22px; font-size: 15px; border-radius: 999px; }
+
+body.wide .app { max-width: 1120px; }
+
+.section { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.section__title { font-family: var(--font-heading); font-weight: 700; font-size: 22px; }
+
+/* A row of cards that scrolls sideways when it does not fit. */
+.row {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  scroll-snap-type: x proximity;
+}
+
+.card {
+  flex: none;
+  width: 160px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--color-text);
+  text-decoration: none;
+  background: var(--color-surface);
+  border-radius: var(--radius-card);
+  scroll-snap-align: start;
+}
+.card:hover { background: var(--color-surface-raised); color: var(--color-text); }
+
+.card__art {
+  width: 100%;
+  aspect-ratio: 1;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 32px;
+  color: var(--color-accent);
+  background: var(--color-surface-raised);
+  border-radius: 12px;
+}
+.card:hover .card__art { background: var(--color-line-strong); }
+.card--host .card__art, .card--artist .card__art,
+.detail--host .card__art, .detail--artist .card__art { border-radius: 50%; }
+
+.card__title { font-weight: 600; font-size: 15px; line-height: 1.3; }
+.card__meta { font-size: 13px; color: var(--color-text-muted); }
+
+.detail { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 24px; }
+.detail__art { width: 200px; flex: none; margin: 0; font-size: 56px; }

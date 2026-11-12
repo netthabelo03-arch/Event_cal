@@ -19,8 +19,18 @@ export function displayName(profile, session) {
   return emailName || 'Account';
 }
 
-/** @returns {HTMLElement} the top bar with the user menu */
+/**
+ * The top bar. Signed out it offers Sign up and Log in; signed in it shows
+ * the person's name with the account menu.
+ * @returns {HTMLElement}
+ */
 export function topBar({ profile, session }) {
+  if (!session) {
+    const signUp = el('a', { href: '#/signup', class: 'topbar__link', text: 'Sign up' });
+    const logIn = el('a', { href: '#/signin', class: 'button button--primary button--small', text: 'Log in' });
+    return el('header', { class: 'topbar' }, [brand(), el('div', { class: 'topbar__actions' }, [signUp, logIn])]);
+  }
+
   const name = displayName(profile, session);
 
   const button = el('button', {
@@ -70,7 +80,7 @@ export function topBar({ profile, session }) {
     try {
       await signOut();
       close();
-      // The app moves to the sign-in screen by itself once signed out.
+      // The app goes back to Discover by itself once signed out.
     } catch (problem) {
       error.textContent = friendlyAuthError(problem);
       error.hidden = false;

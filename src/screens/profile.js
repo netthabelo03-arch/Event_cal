@@ -11,7 +11,7 @@ import { el, field, messageBox, linkTo, whileBusy } from '../dom.js';
 export async function renderProfile({ session }) {
   const message = messageBox();
 
-  const back = linkTo('#/home', 'Back to home');
+  const back = linkTo('#/', 'Back to Discover');
   back.className = 'text-link';
 
   let profile = null;

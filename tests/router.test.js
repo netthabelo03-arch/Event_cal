@@ -1,52 +1,85 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseRoute, resolveRoute, hashFor, PROTECTED_SCREENS, GUEST_SCREENS, SHOWCASE_SCREENS } from '../src/router.js';
+import {
+  parseRoute, resolveRoute, hashFor, safeNext,
+  PROTECTED_SCREENS, GUEST_SCREENS, SHOWCASE_SCREENS, WIDE_SCREENS, ITEM_KINDS,
+} from '../src/router.js';
 import { ROLES, findRole, isRole } from '../src/roles.js';
 
-test('an empty address shows the welcome screen', () => {
+test('an empty address shows Discover', () => {
   for (const hash of ['', '#', '#/', undefined, null]) {
-    assert.deepEqual(parseRoute(hash), { screen: 'welcome' });
+    assert.deepEqual(parseRoute(hash), { screen: 'discover' });
   }
 });
 
 test('named screens are understood', () => {
-  for (const screen of ['signin', 'forgot', 'new-password', 'home', 'profile']) {
+  for (const screen of ['signup', 'signin', 'forgot', 'new-password', 'profile']) {
     assert.deepEqual(parseRoute(`#/${screen}`), { screen });
   }
 });
 
-test('an unknown address falls back to the welcome screen', () => {
-  for (const hash of ['#/signup', '#/signup/host', '#/home/goer', '#/tickets', '#/signin/extra', '#access_token=abc']) {
-    assert.deepEqual(parseRoute(hash), { screen: 'welcome' });
-  }
+test('an item address opens its details', () => {
+  assert.deepEqual(parseRoute('#/event/jazz-night-at-the-yard'), { screen: 'detail', kind: 'event', id: 'jazz-night-at-the-yard' });
+  assert.deepEqual(parseRoute('#/host/jozi-tech-hub'), { screen: 'detail', kind: 'host', id: 'jozi-tech-hub' });
+  assert.deepEqual(parseRoute('#/artist/zee-nova'), { screen: 'detail', kind: 'artist', id: 'zee-nova' });
 });
 
-test('a signed-out person is sent to sign in from every protected screen', () => {
+test('an unknown or malformed address falls back to Discover', () => {
+  const bad = ['#/home', '#/tickets', '#/signin/extra', '#/event', '#/event/', '#/event/Has Spaces', '#/event/UPPER',
+    '#/event/a/b', '#/admin/x', '#/event/-leading-dash', `#/event/${'x'.repeat(65)}`, '#access_token=abc', '#/event/<script>'];
+  for (const hash of bad) assert.deepEqual(parseRoute(hash), { screen: 'discover' });
+});
+
+test('anyone may browse Discover, signed in or not', () => {
+  assert.deepEqual(resolveRoute({ screen: 'discover' }, false), { screen: 'discover' });
+  assert.deepEqual(resolveRoute({ screen: 'discover' }, true), { screen: 'discover' });
+});
+
+test('a signed-out person who opens an item or the profile is asked to log in', () => {
+  assert.deepEqual(resolveRoute({ screen: 'detail', kind: 'event', id: 'x' }, false), { screen: 'signin' });
   for (const screen of PROTECTED_SCREENS) {
     assert.deepEqual(resolveRoute({ screen }, false), { screen: 'signin' });
   }
 });
 
-test('a signed-in person is sent home from every guest screen', () => {
-  for (const screen of GUEST_SCREENS) {
-    assert.deepEqual(resolveRoute({ screen }, true), { screen: 'home' });
-  }
-});
-
-test('allowed routes are left alone', () => {
-  assert.deepEqual(resolveRoute({ screen: 'welcome' }, false), { screen: 'welcome' });
-  assert.deepEqual(resolveRoute({ screen: 'signin' }, false), { screen: 'signin' });
+test('a signed-in person opens items directly', () => {
+  const route = { screen: 'detail', kind: 'event', id: 'x' };
+  assert.deepEqual(resolveRoute(route, true), route);
   assert.deepEqual(resolveRoute({ screen: 'profile' }, true), { screen: 'profile' });
 });
 
-test('every screen is either protected or for guests, never both', () => {
+test('a signed-in person is sent to Discover from the log-in screens', () => {
+  for (const screen of GUEST_SCREENS) {
+    assert.deepEqual(resolveRoute({ screen }, true), { screen: 'discover' });
+  }
+});
+
+test('no screen is both protected and guest-only', () => {
   for (const screen of PROTECTED_SCREENS) assert.equal(GUEST_SCREENS.includes(screen), false);
 });
 
 test('an address made by hashFor is read back as the same route', () => {
-  for (const screen of ['welcome', 'signin', 'forgot', 'home', 'profile', 'new-password']) {
-    assert.deepEqual(parseRoute(hashFor({ screen })), { screen });
+  const routes = [{ screen: 'discover' }, { screen: 'signup' }, { screen: 'signin' }, { screen: 'forgot' },
+    { screen: 'profile' }, { screen: 'new-password' }, ...ITEM_KINDS.map((kind) => ({ screen: 'detail', kind, id: 'some-item-1' }))];
+  for (const route of routes) assert.deepEqual(parseRoute(hashFor(route)), route);
+});
+
+test('only item and profile addresses are remembered for after log-in', () => {
+  assert.equal(safeNext('#/event/jazz-night-at-the-yard'), '#/event/jazz-night-at-the-yard');
+  assert.equal(safeNext('#/profile'), '#/profile');
+  for (const bad of ['#/', '#/signin', '#/signup', '#/new-password', '#/event/Bad Id', 'https://evil.example/#/profile',
+    '#/profile/extra', '//evil.example', 'javascript:alert(1)', '', null, undefined, 42]) {
+    assert.equal(safeNext(bad), null);
   }
+});
+
+test('the moving panel shows beside the log-in screens only', () => {
+  for (const screen of ['signup', 'signin', 'forgot', 'new-password']) assert.equal(SHOWCASE_SCREENS.includes(screen), true);
+  for (const screen of ['discover', 'detail', 'profile']) assert.equal(SHOWCASE_SCREENS.includes(screen), false);
+});
+
+test('Discover and item details use the full width', () => {
+  assert.deepEqual(WIDE_SCREENS, ['discover', 'detail']);
 });
 
 test('the three launch roles are Goer, Host and Artist', () => {
@@ -70,13 +103,4 @@ test('findRole and isRole agree', () => {
   assert.equal(findRole('nobody'), undefined);
   assert.equal(isRole('artist'), true);
   assert.equal(isRole('nobody'), false);
-});
-
-test('the moving panel shows beside the sign-in screens only', () => {
-  for (const screen of ['welcome', 'signin', 'forgot', 'new-password']) {
-    assert.equal(SHOWCASE_SCREENS.includes(screen), true);
-  }
-  for (const screen of ['home', 'profile']) {
-    assert.equal(SHOWCASE_SCREENS.includes(screen), false);
-  }
 });

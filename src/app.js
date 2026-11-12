@@ -1,22 +1,25 @@
 // Starts the app: finds out whether someone is signed in, shows the right
 // screen for the address, and keeps both in step.
 
-import { parseRoute, resolveRoute, hashFor, SHOWCASE_SCREENS } from './router.js';
+import { parseRoute, resolveRoute, hashFor, PROTECTED_SCREENS, SHOWCASE_SCREENS, WIDE_SCREENS } from './router.js';
 import { currentSession, onAuthChange } from './auth/api.js';
+import { saveNext, takeNext } from './next.js';
 import { el, brand } from './dom.js';
-import { renderWelcome } from './screens/welcome.js';
+import { renderDiscover } from './screens/discover.js';
+import { renderDetail } from './screens/detail.js';
+import { renderSignUp } from './screens/signup.js';
 import { renderSignIn } from './screens/signin.js';
 import { renderForgot } from './screens/forgot.js';
 import { renderNewPassword } from './screens/newpassword.js';
-import { renderHome } from './screens/home.js';
 import { renderProfile } from './screens/profile.js';
 
 const SCREENS = {
-  welcome: renderWelcome,
+  discover: renderDiscover,
+  detail: renderDetail,
+  signup: renderSignUp,
   signin: renderSignIn,
   forgot: renderForgot,
   'new-password': renderNewPassword,
-  home: renderHome,
   profile: renderProfile,
 };
 
@@ -35,21 +38,30 @@ function loadingScreen() {
 
 async function show() {
   const asked = parseRoute(window.location.hash);
-  const route = resolveRoute(asked, session !== null);
+  const signedIn = session !== null;
+  const route = resolveRoute(asked, signedIn);
+
   if (route.screen !== asked.screen) {
-    // Not allowed here (or already signed in): go to the right screen instead.
-    navigate(hashFor(route));
+    if (!signedIn && PROTECTED_SCREENS.includes(asked.screen)) {
+      // A signed-out person clicked an item: remember it, ask them to log in,
+      // and bring them back to it afterwards.
+      saveNext(hashFor(asked));
+      navigate(hashFor(route));
+    } else {
+      // A signed-in person on a log-in screen: go to what they wanted, else Discover.
+      navigate(takeNext() ?? hashFor(route));
+    }
     return;
   }
 
-  // The moving panel only sits beside the sign-in screens (and only on big screens; see app.css).
   document.body.classList.toggle('with-showcase', SHOWCASE_SCREENS.includes(route.screen));
+  document.body.classList.toggle('wide', WIDE_SCREENS.includes(route.screen));
 
   // Screens that fetch data are slow; if the person moves on meanwhile,
   // only the newest screen may be drawn.
   const thisRender = ++latestRender;
-  const pending = SCREENS[route.screen]({ session, navigate });
-  if (pending instanceof Promise) root.replaceChildren(...loadingScreen());
+  const pending = SCREENS[route.screen]({ session, navigate, kind: route.kind, id: route.id });
+  if (pending instanceof Promise && root.childElementCount === 0) root.replaceChildren(...loadingScreen());
 
   let content;
   try {
@@ -68,6 +80,12 @@ async function start() {
   root.replaceChildren(...loadingScreen());
   try {
     session = await currentSession();
+    if (session !== null) {
+      // Arriving already signed in, for example from the link in the
+      // confirmation email: go to the item they clicked before, if any.
+      const next = takeNext();
+      if (next) navigate(next);
+    }
     await onAuthChange((event, newSession) => {
       const before = session?.user?.id ?? null;
       const after = newSession?.user?.id ?? null;
@@ -79,13 +97,23 @@ async function start() {
       // Deferred, because the accounts library must finish its own work
       // before the app asks it for anything else.
       setTimeout(() => {
-        if (event === 'PASSWORD_RECOVERY') navigate('#/new-password');
+        if (event === 'PASSWORD_RECOVERY') {
+          navigate('#/new-password');
+        } else if (before === null && after !== null) {
+          // Just signed in, possibly from the link in the confirmation email:
+          // go to the item they asked for, if there was one.
+          const next = takeNext();
+          if (next) navigate(next);
+        } else if (after === null) {
+          // Just logged out: back to Discover.
+          navigate('#/');
+        }
         show();
       }, 0);
     });
   } catch {
-    // The accounts service could not be reached. The sign-in screens still
-    // open, and show a clear error when the person tries to use them.
+    // The accounts service could not be reached. Browsing still works, and the
+    // log-in screens show a clear error when the person tries to use them.
     session = null;
   }
   window.addEventListener('hashchange', show);

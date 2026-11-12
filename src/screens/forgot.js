@@ -15,7 +15,7 @@ export function renderForgot() {
     message.node,
     el('div', { class: 'push-down stack' }, [
       submit,
-      el('p', { class: 'link-row' }, [linkTo('#/signin', 'Back to sign in')]),
+      el('p', { class: 'link-row' }, [linkTo('#/signin', 'Back to log in')]),
     ]),
   ]);
 
