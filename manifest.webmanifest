@@ -1,6 +1,6 @@
 {
-  "name": "Event Calender",
-  "short_name": "Event Cal",
+  "name": "plusespot",
+  "short_name": "plusespot",
   "description": "Short event clips, reminders and tickets.",
   "start_url": "./",
   "scope": "./",

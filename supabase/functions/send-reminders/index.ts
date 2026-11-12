@@ -5,7 +5,7 @@
 //
 // Secrets to set under Edge Functions, Secrets:
 //   RESEND_API_KEY     the email service's API key
-//   EMAIL_FROM         for example: Event Calender <reminders@yourdomain.co.za>
+//   EMAIL_FROM         for example: plusespot <reminders@yourdomain.co.za>
 //   APP_URL            https://netthabelo03-arch.github.io/Event_cal/
 //   VAPID_PUBLIC_KEY   phone notification public key (also in src/config.js)
 //   VAPID_PRIVATE_KEY  phone notification private key (never in the app or repository)

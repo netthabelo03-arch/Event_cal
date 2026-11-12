@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Event Calender: short event clips, reminders and tickets for Goers, Hosts and Artists.",
+  "description": "plusespot: short event clips, reminders and tickets for Goers, Hosts and Artists.",
   "scripts": {
     "test": "node --test"
   }

@@ -28,7 +28,7 @@ export const LOGO_PATHS = '<rect x="3" y="5" width="18" height="16" rx="3"></rec
 export function brand() {
   const mark = icon(LOGO_PATHS, 32);
   mark.style.color = 'var(--color-accent)';
-  return el('a', { class: 'brand', href: '#/', 'aria-label': 'Event Calender, go to Discover' }, [mark, el('span', { class: 'brand__name', text: 'Event Calender' })]);
+  return el('a', { class: 'brand', href: '#/', 'aria-label': 'plusespot, go to Discover' }, [mark, el('span', { class: 'brand__name', text: 'plusespot' })]);
 }
 
 /** A link to another screen of the app, for example linkTo('#/signin', 'Sign in'). */

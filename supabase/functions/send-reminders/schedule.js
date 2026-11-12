@@ -64,12 +64,12 @@ export function emailContent(event, appUrl) {
     '',
     `See the event: ${link}`,
     '',
-    'You get this email because you tapped "Remind me" on this event in Event Calender.',
+    'You get this email because you tapped "Remind me" on this event in plusespot.',
     'To stop reminders for it, open My reminders in the app and remove it.',
   ].filter((line, index, lines) => line !== '' || lines[index - 1] !== '').join('\n');
   const html = `<!doctype html><html><body style="margin:0;padding:24px;background:#0a0a0a;color:#fafafa;font-family:Arial,sans-serif">
 <div style="max-width:480px;margin:0 auto">
-<p style="color:#4ade80;font-weight:bold;margin:0 0 8px">Event Calender reminder</p>
+<p style="color:#4ade80;font-weight:bold;margin:0 0 8px">plusespot reminder</p>
 <h1 style="font-size:24px;margin:0 0 12px">${escapeHtml(event.title)}</h1>
 <p style="margin:0 0 4px">${escapeHtml(when)}</p>
 <p style="margin:0 0 4px">${escapeHtml(where)}</p>
