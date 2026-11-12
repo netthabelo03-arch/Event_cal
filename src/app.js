@@ -12,6 +12,10 @@ import { renderSignIn } from './screens/signin.js';
 import { renderForgot } from './screens/forgot.js';
 import { renderNewPassword } from './screens/newpassword.js';
 import { renderProfile } from './screens/profile.js';
+import { renderMyEvents } from './screens/myevents.js';
+import { renderNewEvent } from './screens/newevent.js';
+import { renderReview } from './screens/review.js';
+import { forgetViewer } from './viewer.js';
 
 const SCREENS = {
   discover: renderDiscover,
@@ -21,6 +25,9 @@ const SCREENS = {
   forgot: renderForgot,
   'new-password': renderNewPassword,
   profile: renderProfile,
+  'my-events': renderMyEvents,
+  'new-event': renderNewEvent,
+  review: renderReview,
 };
 
 const root = document.getElementById('app');
@@ -94,6 +101,7 @@ async function start() {
       // when the tab regains focus. Redrawing then would wipe a half-filled form,
       // so only redraw when who is signed in has changed.
       if (event !== 'PASSWORD_RECOVERY' && before === after) return;
+      forgetViewer();
       // Deferred, because the accounts library must finish its own work
       // before the app asks it for anything else.
       setTimeout(() => {

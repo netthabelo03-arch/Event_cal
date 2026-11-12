@@ -52,6 +52,8 @@ Plain HTML, CSS and JavaScript. There is no framework and nothing to install.
 | `src/roles.js` | The list of roles; add a role here and it appears in the profile |
 | `src/screens/` | One file per screen |
 | `src/auth/` | Accounts: form checks, error messages and the calls to Supabase |
+| `src/events/` | Events: the form's rules, statuses, dates, and the calls to Supabase |
+| `src/viewer.js` | Who is signed in: their profile and whether they are an admin |
 | `src/config.js` | The Supabase project address and publishable key |
 | `supabase/` | Database setup scripts, run once in the Supabase dashboard |
 | `src/rules/` | Product rules: clip length and the host fee |
@@ -59,18 +61,19 @@ Plain HTML, CSS and JavaScript. There is no framework and nothing to install.
 | `tests/` | Automated tests |
 | `docs/defect-log.md` | The defect log |
 
-## What works so far (Sprints 0 and 1)
+## What works so far (Sprints 0 to 2)
 
 - Discover, open to everyone, with sample events, hosts and music.
 - Item details that need a log-in, returning to the clicked item afterwards.
 - Sign up with an email and a password, log in, forgot password, profile (name and role) and log out from the menu under the person's name.
+- Hosts post an event with a clip of at most 30 seconds; admins approve or reject it; approved events show on Discover with their own page.
 - The app can be added to a phone's home screen.
 
 ## Accounts (Sprint 1)
 
 Anyone can browse Discover without an account. Clicking an item (an event, a host or an artist) asks a signed-out person to log in, and brings them back to that item afterwards. Signing up takes an email and a strong password (8+ characters with a capital letter, a small letter, a number and a symbol), confirmed once by an emailed link; after that the person stays signed in on the device. Everyone starts as a Goer; a name, and switching to Host or Artist, are optional steps in the profile. Accounts and profiles are kept in Supabase.
 
-Until hosts can post events (Sprint 2), Discover shows sample items from `src/sample.js`. They are not real events.
+Until real content exists, Discover shows sample items from `src/sample.js`. Sample events disappear as soon as one real event is live; sample hosts and music stay until those are built.
 
 One-time setup in the Supabase dashboard:
 
@@ -80,6 +83,23 @@ One-time setup in the Supabase dashboard:
 `src/config.js` holds the Supabase project URL and publishable key. The publishable key is meant to be public. Never put a secret key in this repository.
 
 Manual test cases for this sprint are in [docs/sprint-1-test-cases.md](docs/sprint-1-test-cases.md).
+
+## Events (Sprint 2)
+
+A person whose role is Host can post an event from **My events**: a video clip of at most 30 seconds (MP4, WebM or MOV, up to 50 MB), the event's name, date, start time, venue, category and an optional description. The event then waits in the **Review queue**, where an admin watches the clip and approves or rejects it with a reason. Approved events appear under "Upcoming events" on Discover and have their own page with the full clip. Event times are always Johannesburg time.
+
+One-time setup in the Supabase dashboard:
+
+1. **Create the events table and clip storage.** Open SQL Editor, paste the contents of [`supabase/002_events.sql`](supabase/002_events.sql) and press Run.
+2. **Make yourself an admin.** Sign up in the app, then run the one-line statement at the end of that file with your sign-up email.
+
+Things to know:
+
+- The clip's length is checked on the host's device before upload. The database only accepts a reported length of 30 seconds or less, and the review queue shows the clip's actual length, so the admin review is the final check.
+- Clips are in a public storage bucket: anyone who has a clip's address can play it, including before approval. The address is long and random, and unapproved events are not listed anywhere.
+- Hosts cannot edit or delete an event yet. That arrives with the manage-event screen in a later sprint.
+
+Manual test cases for this sprint are in [docs/sprint-2-test-cases.md](docs/sprint-2-test-cases.md).
 
 ## Opening the app
 

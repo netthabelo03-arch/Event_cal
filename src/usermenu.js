@@ -20,11 +20,22 @@ export function displayName(profile, session) {
 }
 
 /**
+ * The links shown in the account menu, above Log out.
+ * @returns {{ href: string, text: string }[]}
+ */
+export function menuLinks(profile, admin) {
+  const links = [{ href: '#/profile', text: 'Profile' }];
+  if (profile?.role === 'host') links.push({ href: '#/my-events', text: 'My events' });
+  if (admin === true) links.push({ href: '#/review', text: 'Review queue' });
+  return links;
+}
+
+/**
  * The top bar. Signed out it offers Sign up and Log in; signed in it shows
  * the person's name with the account menu.
  * @returns {HTMLElement}
  */
-export function topBar({ profile, session }) {
+export function topBar({ profile, session, admin = false }) {
   if (!session) {
     const signUp = el('a', { href: '#/signup', class: 'topbar__link', text: 'Sign up' });
     const logIn = el('a', { href: '#/signin', class: 'button button--primary button--small', text: 'Log in' });
@@ -41,12 +52,13 @@ export function topBar({ profile, session }) {
     'aria-label': `Account menu for ${name}`,
   }, [el('span', { class: 'user-menu__name', text: name }), icon(CHEVRON, 16)]);
 
-  const profileItem = el('a', { href: '#/profile', class: 'user-menu__item', role: 'menuitem', text: 'Profile' });
+  // Links in the menu depend on who is signed in: hosts get their events, admins the review queue.
+  const links = menuLinks(profile, admin).map(({ href, text }) => el('a', { href, class: 'user-menu__item', role: 'menuitem', text }));
   const logOutItem = el('button', { type: 'button', class: 'user-menu__item user-menu__item--danger', role: 'menuitem', text: 'Log out' });
   const error = el('p', { class: 'user-menu__error', role: 'alert' });
   error.hidden = true;
 
-  const list = el('div', { class: 'user-menu__list', role: 'menu' }, [profileItem, logOutItem, error]);
+  const list = el('div', { class: 'user-menu__list', role: 'menu' }, [...links, logOutItem, error]);
   list.hidden = true;
 
   const menu = el('div', { class: 'user-menu' }, [button, list]);
@@ -74,7 +86,7 @@ export function topBar({ profile, session }) {
   }
 
   button.addEventListener('click', () => (list.hidden ? open() : close()));
-  profileItem.addEventListener('click', close);
+  for (const link of links) link.addEventListener('click', close);
   logOutItem.addEventListener('click', () => whileBusy(logOutItem, 'Logging out…', async () => {
     error.hidden = true;
     try {

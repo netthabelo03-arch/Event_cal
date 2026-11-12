@@ -2,7 +2,8 @@
 // Logging out is in the menu under the person's name, top right.
 
 import { ROLES } from '../roles.js';
-import { getProfile, updateProfile } from '../auth/api.js';
+import { updateProfile } from '../auth/api.js';
+import { loadViewer, forgetViewer } from '../viewer.js';
 import { checkOptionalName } from '../auth/validate.js';
 import { friendlyAuthError } from '../auth/errors.js';
 import { topBar } from '../usermenu.js';
@@ -14,12 +15,7 @@ export async function renderProfile({ session }) {
   const back = linkTo('#/', 'Back to Discover');
   back.className = 'text-link';
 
-  let profile = null;
-  try {
-    profile = await getProfile(session.user.id);
-  } catch (error) {
-    message.show(friendlyAuthError(error));
-  }
+  const { profile, admin } = await loadViewer(session);
 
   const heading = el('div', { class: 'stack' }, [
     el('h1', { class: 'title', text: 'Profile' }),
@@ -28,11 +24,11 @@ export async function renderProfile({ session }) {
 
   if (profile === null) {
     if (message.node.hidden) message.show('Your profile was not found. The database setup script may not have been run yet.');
-    return [topBar({ profile: null, session }), back, heading, message.node];
+    return [topBar({ profile: null, session, admin }), back, heading, message.node];
   }
 
   // Kept as its own element so the name on the menu button can be refreshed after saving.
-  let bar = topBar({ profile, session });
+  let bar = topBar({ profile, session, admin });
 
   let role = profile.role;
   const options = ROLES.map((item) => {
@@ -74,7 +70,8 @@ export async function renderProfile({ session }) {
         name.input.value = saved.full_name;
         role = saved.role;
         updateRole();
-        const freshBar = topBar({ profile: saved, session });
+        forgetViewer();
+        const freshBar = topBar({ profile: saved, session, admin });
         bar.replaceWith(freshBar);
         bar = freshBar;
         message.show('Saved.', 'success');

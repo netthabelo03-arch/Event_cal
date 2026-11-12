@@ -360,3 +360,71 @@ body.wide .app { max-width: 1120px; }
 .rules__mark { flex: none; width: 16px; text-align: center; font-weight: 700; }
 .rules__item--met { color: var(--color-accent-hover); }
 .rules__status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* Events (Sprint 2): the host's form and list, the review queue, the event page. */
+.field__hint { font-size: 13px; color: var(--color-text-muted); }
+.field-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.file-input {
+  width: 100%;
+  padding: 12px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--color-text-soft);
+  background: var(--color-surface);
+  border: 2px dashed var(--color-line-strong);
+  border-radius: var(--radius-control);
+}
+.file-input::file-selector-button {
+  margin-right: 12px;
+  padding: 8px 14px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--color-on-accent);
+  background: var(--color-accent);
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.input--area { height: auto; padding: 14px 16px; line-height: 1.5; resize: vertical; }
+/* Date and time pickers follow the dark theme. */
+.input[type="date"], .input[type="time"] { color-scheme: dark; }
+
+.pills { display: flex; flex-wrap: wrap; gap: 8px; }
+.pill {
+  min-height: var(--touch-target);
+  padding: 0 16px;
+  font: inherit;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.pill[aria-pressed="true"] { background: var(--color-accent); color: var(--color-on-accent); }
+
+.event-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 12px; }
+.event-row, .review-card {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--color-surface);
+  border-radius: var(--radius-card);
+}
+.review-card { gap: 10px; }
+.event-row__title { font-weight: 600; font-size: 16px; }
+.event-row__meta { font-size: 13px; color: var(--color-text-muted); }
+.event-row__link { padding: 4px 0 0; }
+.review-card__text, .detail__text { font-size: 15px; line-height: 1.55; color: var(--color-text-soft); white-space: pre-wrap; }
+
+.chip { align-self: flex-start; padding: 4px 10px; font-size: 12px; font-weight: 600; border-radius: 999px; }
+.chip--good { background: var(--color-success-bg); color: var(--color-accent-hover); }
+.chip--waiting { background: #3a3008; color: var(--color-warning); }
+.chip--bad { background: var(--color-danger-bg); color: var(--color-danger); }
+
+.clip { width: 100%; max-height: 70vh; background: #000; border-radius: var(--radius-card); }
+body.wide .clip { max-width: 420px; }

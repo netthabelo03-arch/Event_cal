@@ -1,5 +1,7 @@
 // Turns an error from the accounts service into a sentence a person can act on.
 
+const SETUP_MISSING = 'The database setup for this feature has not been run yet.';
+
 const BY_CODE = {
   invalid_credentials: 'Email or password is incorrect.',
   email_not_confirmed: 'Confirm your email first. Open the link we sent you, then sign in.',
@@ -12,6 +14,12 @@ const BY_CODE = {
   signup_disabled: 'New sign-ups are switched off at the moment.',
   email_address_invalid: 'That email address was not accepted. Check it and try again.',
   session_not_found: 'You have been signed out. Sign in again.',
+  // Database and storage (Sprint 2).
+  42501: 'You are not allowed to do that.',
+  review_not_applied: 'That event has already been reviewed.',
+  '42P01': SETUP_MISSING,
+  PGRST205: SETUP_MISSING,
+  PGRST202: SETUP_MISSING,
 };
 
 export const GENERIC_ERROR = 'Something went wrong. Please try again.';
@@ -26,6 +34,10 @@ export function friendlyAuthError(error) {
     const code = error.code;
     if (typeof code === 'string' && Object.hasOwn(BY_CODE, code)) return BY_CODE[code];
     const message = typeof error.message === 'string' ? error.message : '';
+    // Storage errors carry no code, only a message.
+    if (/exceeded the maximum allowed size|payload too large/i.test(message)) return 'That file is too large. Choose a smaller clip.';
+    if (/mime type .* is not supported/i.test(message)) return 'That kind of file is not accepted. Use an MP4, WebM or MOV video.';
+    if (/row-level security/i.test(message)) return BY_CODE[42501];
     if (error.name === 'TypeError' || /failed to fetch|networkerror|load failed/i.test(message)) {
       return OFFLINE_ERROR;
     }

@@ -13,7 +13,7 @@ test('an empty address shows Discover', () => {
 });
 
 test('named screens are understood', () => {
-  for (const screen of ['signup', 'signin', 'forgot', 'new-password', 'profile']) {
+  for (const screen of ['signup', 'signin', 'forgot', 'new-password', 'profile', 'my-events', 'new-event', 'review']) {
     assert.deepEqual(parseRoute(`#/${screen}`), { screen });
   }
 });
@@ -67,6 +67,8 @@ test('an address made by hashFor is read back as the same route', () => {
 test('only item and profile addresses are remembered for after log-in', () => {
   assert.equal(safeNext('#/event/jazz-night-at-the-yard'), '#/event/jazz-night-at-the-yard');
   assert.equal(safeNext('#/profile'), '#/profile');
+  assert.equal(safeNext('#/new-event'), '#/new-event');
+  assert.equal(safeNext('#/event/3f2c1a9e-8b7d-4c6a-9e5f-0a1b2c3d4e5f'), '#/event/3f2c1a9e-8b7d-4c6a-9e5f-0a1b2c3d4e5f');
   for (const bad of ['#/', '#/signin', '#/signup', '#/new-password', '#/event/Bad Id', 'https://evil.example/#/profile',
     '#/profile/extra', '//evil.example', 'javascript:alert(1)', '', null, undefined, 42]) {
     assert.equal(safeNext(bad), null);
@@ -75,7 +77,7 @@ test('only item and profile addresses are remembered for after log-in', () => {
 
 test('the moving panel shows beside the log-in screens only', () => {
   for (const screen of ['signup', 'signin', 'forgot', 'new-password']) assert.equal(SHOWCASE_SCREENS.includes(screen), true);
-  for (const screen of ['discover', 'detail', 'profile']) assert.equal(SHOWCASE_SCREENS.includes(screen), false);
+  for (const screen of ['discover', 'detail', 'profile', 'my-events', 'new-event', 'review']) assert.equal(SHOWCASE_SCREENS.includes(screen), false);
 });
 
 test('Discover and item details use the full width', () => {
