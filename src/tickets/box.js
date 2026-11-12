@@ -81,7 +81,8 @@ export async function ticketsBox(event, navigate) {
       message.hidden = false;
       return;
     }
-    if (result.status === 'paid') {
+    if (result.status === 'paid' || result.demo === true) {
+      // Free tickets are ready; demo payments are taken on the order screen.
       navigate(`#/order/${result.order_id}`);
     } else if (typeof result.authorization_url === 'string' && result.authorization_url.startsWith('https://checkout.paystack.com/')) {
       // Paystack's own secure page takes the card details; it sends the person back here afterwards.
@@ -100,6 +101,6 @@ export async function ticketsBox(event, navigate) {
     total,
     message,
     buy,
-    el('p', { class: 'event-row__meta', text: 'Payments are handled securely by Paystack. Your tickets appear in My tickets.' }),
+    el('p', { class: 'event-row__meta', text: 'Your tickets appear in My tickets after paying.' }),
   ]);
 }

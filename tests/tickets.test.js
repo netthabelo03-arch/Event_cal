@@ -4,7 +4,7 @@ import { createHmac } from 'node:crypto';
 import {
   MAX_PER_ORDER, formatRand, parseRand, checkTicketTypes, remaining, availabilityLabel, cartSummary, maxFor, buyLabel, checkoutErrorMessage,
 } from '../src/tickets/rules.js';
-import { verifySignature, paidOrderFrom, isOrderId, returnUrl } from '../supabase/functions/paystack-webhook/paystack.js';
+import { verifySignature, paidOrderFrom, isOrderId, returnUrl, paymentMode } from '../supabase/functions/paystack-webhook/paystack.js';
 import { readFileSync } from 'node:fs';
 
 test('prices are shown the South African way', () => {
@@ -139,4 +139,13 @@ test('both payment functions use the same Paystack helpers', () => {
     readFileSync(new URL('../supabase/functions/checkout/paystack.js', import.meta.url), 'utf8'),
     readFileSync(new URL('../supabase/functions/paystack-webhook/paystack.js', import.meta.url), 'utf8'),
   );
+});
+
+test('payment mode: Paystack when its key is set, demo only when asked, otherwise off', () => {
+  const envOf = (values) => (name) => values[name] ?? '';
+  assert.equal(paymentMode(envOf({ PAYSTACK_SECRET_KEY: 'sk_test_x', PAYMENTS_MODE: 'demo' })), 'paystack');
+  assert.equal(paymentMode(envOf({ PAYMENTS_MODE: 'demo' })), 'demo');
+  assert.equal(paymentMode(envOf({ PAYMENTS_MODE: ' Demo ' })), 'demo');
+  assert.equal(paymentMode(envOf({ PAYMENTS_MODE: 'yes' })), 'off');
+  assert.equal(paymentMode(envOf({})), 'off');
 });

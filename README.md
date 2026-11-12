@@ -150,6 +150,8 @@ Prices and stock are checked in the database, never trusted from the browser. Ti
 
 1. **Database.** In the SQL Editor run [`supabase/006_tickets.sql`](supabase/006_tickets.sql).
 2. **Paystack.** Create an account at paystack.com (South Africa). In Settings, API Keys & Webhooks, keep **Test mode** on and copy the **test secret key** (`sk_test_...`).
+**Demo payments (for testing, no Paystack needed):** in Supabase, Edge Functions, Secrets, add `PAYMENTS_MODE` with the value `demo` and do not add `PAYSTACK_SECRET_KEY`. Buyers then see a "Demo payment" screen with a Pay button and no real money moves. Remove `PAYMENTS_MODE` before going live; once `PAYSTACK_SECRET_KEY` is set, Paystack is used instead.
+
 3. **Secret.** In Supabase, Edge Functions, Secrets, add `PAYSTACK_SECRET_KEY` with that key. (`APP_URL` is already set from Sprint 4.)
 4. **Functions.** Create two Edge Functions, each with its two files:
    - `checkout`: [`index.ts` and `paystack.js`](supabase/functions/checkout/). Keep "Verify JWT" **on**.

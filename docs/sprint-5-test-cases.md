@@ -19,3 +19,6 @@ Before testing, complete the setup in the README section "Tickets (Sprint 5)". U
 | S5-13 | Free tickets | Create an event with a ticket priced 0. As a Goer choose 2 and press "Get 2 free tickets". | No payment page; the order is confirmed at once and the tickets appear in My tickets. |
 | S5-14 | Host sees sales | As the host, open My events. | The event shows how many tickets are taken out of the total. |
 | S5-15 | Own tickets only | As another Goer, open the order address from S5-07. | "Order not found". |
+| S5-16 | Demo payment | With `PAYMENTS_MODE = demo` and no Paystack key, choose 2 tickets and press Buy. | The "Demo payment" screen shows the total and says no real money is charged. |
+| S5-17 | Demo pay | On that screen press "Pay R… (demo)". | "You're going!"; the tickets with QR codes are in My tickets. |
+| S5-18 | Demo cancel | Start a demo order and press Cancel. | Back on the event page; no tickets are issued. |

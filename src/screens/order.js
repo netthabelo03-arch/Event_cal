@@ -1,13 +1,13 @@
 // An order after paying: waits for the payment to be confirmed, then says the
 // tickets are ready.
 
-import { getOrder, verifyOrder } from '../tickets/api.js';
+import { getOrder, verifyOrder, payDemoOrder } from '../tickets/api.js';
 import { formatRand } from '../tickets/rules.js';
 import { formatWhen } from '../events/rules.js';
 import { friendlyAuthError } from '../auth/errors.js';
 import { loadViewer } from '../viewer.js';
 import { topBar } from '../usermenu.js';
-import { el, linkTo } from '../dom.js';
+import { el, linkTo, whileBusy } from '../dom.js';
 
 const CHECKS = 10;
 const GAP_MS = 3000;
@@ -40,6 +40,30 @@ export async function renderOrder({ session, id }) {
       heading.textContent = 'Payment not completed';
       status.textContent = 'You have not been charged. You can try again from the event page.';
       next.replaceChildren(el('a', { href: `#/event/${order.event_id}`, class: 'button button--quiet', text: 'Back to the event' }));
+    } else if (state === 'demo') {
+      heading.textContent = 'Demo payment';
+      status.textContent = 'Payments are in demo mode: no real money is charged and no card is needed.';
+      const pay = el('button', { type: 'button', class: 'button button--primary', text: `Pay ${formatRand(order.total_cents)} (demo)` });
+      const problem = el('p', { class: 'field__error', role: 'alert' });
+      problem.hidden = true;
+      pay.addEventListener('click', async () => {
+        problem.hidden = true;
+        let result = null;
+        await whileBusy(pay, 'Paying…', async () => {
+          try {
+            result = await payDemoOrder(order.id);
+          } catch {
+            result = null;
+          }
+        });
+        if (result?.status === 'paid') {
+          show('paid');
+        } else {
+          problem.textContent = 'The demo payment did not go through. Please try again.';
+          problem.hidden = false;
+        }
+      });
+      next.replaceChildren(problem, pay, el('a', { href: `#/event/${order.event_id}`, class: 'button button--quiet', text: 'Cancel' }));
     } else {
       heading.textContent = 'Confirming your payment…';
       status.textContent = 'This usually takes a few seconds. You can leave this page; your tickets will appear in My tickets once the payment is confirmed.';
@@ -54,13 +78,17 @@ export async function renderOrder({ session, id }) {
 
   show(order.status);
 
-  // Ask Paystack a few times while the person waits; stop when they leave the page.
+  // Ask the checkout a few times (in demo mode the first answer says so) while the person waits; stop when they leave the page.
   if (order.status === 'pending') {
     (async () => {
       for (let attempt = 0; attempt < CHECKS; attempt += 1) {
         if (!heading.isConnected && attempt > 0) return;
         try {
           const result = await verifyOrder(order.id);
+          if (result.demo === true && result.status === 'pending') {
+            show('demo');
+            return;
+          }
           if (result.status !== 'pending') {
             show(result.status);
             return;

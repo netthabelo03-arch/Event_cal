@@ -38,7 +38,7 @@ async function checkout(body) {
 
 /**
  * Start buying tickets.
- * @returns {Promise<{ order_id: string, status: 'paid' | 'pending', authorization_url?: string }>}
+ * @returns {Promise<{ order_id: string, status: 'paid' | 'pending', demo?: boolean, authorization_url?: string }>}
  */
 export function startCheckout(eventId, items) {
   return checkout({ action: 'start', event_id: eventId, items });
@@ -47,6 +47,11 @@ export function startCheckout(eventId, items) {
 /** Ask whether a payment has gone through; issues the tickets when it has. */
 export function verifyOrder(orderId) {
   return checkout({ action: 'verify', order_id: orderId });
+}
+
+/** Demo payments only: pay for an order without real money. */
+export function payDemoOrder(orderId) {
+  return checkout({ action: 'demo_pay', order_id: orderId });
 }
 
 /** One of the signed-in person's orders, with its event and tickets chosen. */

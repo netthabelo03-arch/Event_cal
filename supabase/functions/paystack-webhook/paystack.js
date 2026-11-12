@@ -3,6 +3,19 @@
 /** Paystack's address for API calls. */
 export const PAYSTACK_API = 'https://api.paystack.co';
 
+/**
+ * How the checkout takes money. 'paystack' when a Paystack secret key is set,
+ * otherwise 'demo' when PAYMENTS_MODE is "demo" (no real money: the buyer taps
+ * Pay and the tickets are issued), otherwise 'off'.
+ * @param {(name: string) => string} env
+ * @returns {'paystack' | 'demo' | 'off'}
+ */
+export function paymentMode(env) {
+  if (env('PAYSTACK_SECRET_KEY')) return 'paystack';
+  if (String(env('PAYMENTS_MODE')).trim().toLowerCase() === 'demo') return 'demo';
+  return 'off';
+}
+
 /** An order id (a UUID). Paystack references that are not ours are ignored. */
 export function isOrderId(value) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(String(value));
