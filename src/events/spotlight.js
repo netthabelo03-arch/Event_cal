@@ -33,7 +33,7 @@ export function poseFor(offset) {
   const side = Math.sign(offset);
   if (distance > SIDE) return { x: side * 1.9, z: -520, rotate: -side * 60, scale: 0.7, opacity: 0, hidden: true };
   return {
-    x: side * (distance === 0 ? 0 : 0.78 + (distance - 1) * 0.5),
+    x: side * (distance === 0 ? 0 : 0.95 + (distance - 1) * 0.6),
     z: distance === 0 ? 0 : -distance * 220,
     rotate: distance === 0 ? 0 : -side * Math.min(distance * 42, 60),
     scale: 1 - distance * 0.06,
