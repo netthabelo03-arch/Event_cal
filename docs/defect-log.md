@@ -11,3 +11,4 @@ One row per defect. "Sprint found" is when it was noticed; "Sprint caused" is th
 
 Severity: Critical (app unusable or money wrong), High (feature broken), Medium (works with a workaround), Low (cosmetic).
 Status: Open, In progress, Fixed, Retested, Closed.
+| D-005 | Sprint 5 | No Buy button on an event posted before Sprint 5 | Events created before ticket sales existed have no ticket types, and hosts could only add tickets while creating an event. | My events now shows "Add tickets" for upcoming events without tickets. | Fixed |

@@ -2,12 +2,57 @@
 // to posting a new one.
 
 import { listMyEvents } from '../events/api.js';
+import { addTicketTypes } from '../tickets/api.js';
+import { ticketEditor } from '../tickets/editor.js';
 import { statusOf, formatWhen } from '../events/rules.js';
 import { viewsLabel } from '../events/discovery.js';
 import { friendlyAuthError } from '../auth/errors.js';
 import { loadViewer } from '../viewer.js';
 import { topBar } from '../usermenu.js';
-import { el, linkTo } from '../dom.js';
+import { el, linkTo, whileBusy } from '../dom.js';
+
+/**
+ * "Add tickets" for an upcoming event that has none yet (for example one posted
+ * before ticket sales existed). Opens the ticket editor in place.
+ */
+function addTicketsPanel(event) {
+  const open = el('button', { type: 'button', class: 'button button--quiet button--small', text: 'Add tickets' });
+  const panel = el('div', { class: 'stack' }, [open]);
+  open.addEventListener('click', () => {
+    const editor = ticketEditor();
+    const message = el('p', { class: 'field__error', role: 'alert' });
+    message.hidden = true;
+    const save = el('button', { type: 'button', class: 'button button--primary', text: 'Save tickets' });
+    const cancel = el('button', { type: 'button', class: 'text-link', text: 'Cancel' });
+    cancel.addEventListener('click', () => panel.replaceChildren(open));
+    save.addEventListener('click', async () => {
+      message.hidden = true;
+      const result = editor.check();
+      if (!result.ok || result.types.length === 0) {
+        message.textContent = result.types.length === 0 ? 'Add at least one ticket type.' : 'Fix the highlighted tickets and try again.';
+        message.hidden = false;
+        return;
+      }
+      let saved = false;
+      await whileBusy(save, 'Saving…', async () => {
+        try {
+          await addTicketTypes(event.id, result.types);
+          saved = true;
+        } catch (error) {
+          message.textContent = friendlyAuthError(error);
+          message.hidden = false;
+        }
+      });
+      if (saved) {
+        const total = result.types.reduce((sum, type) => sum + type.quantity, 0);
+        const when = event.status === 'live' ? 'They are on sale now.' : 'They go on sale when the event is approved.';
+        panel.replaceChildren(el('p', { class: 'event-row__meta', role: 'status', text: `${total} tickets added. ${when}` }));
+      }
+    });
+    panel.replaceChildren(editor.node, message, el('div', { class: 'link-row' }, [save, cancel]));
+  });
+  return panel;
+}
 
 function eventRow(event) {
   const status = statusOf(event.status);
@@ -27,6 +72,12 @@ function eventRow(event) {
       const total = types.reduce((sum, type) => sum + type.quantity, 0);
       lines.push(el('span', { class: 'event-row__meta', text: `${sold} of ${total} tickets taken` }));
     }
+  }
+  const hasTickets = Array.isArray(event.ticket_types) && event.ticket_types.length > 0;
+  if (!hasTickets && (event.status === 'live' || event.status === 'in_review') && Date.parse(event.starts_at) > Date.now()) {
+    lines.push(addTicketsPanel(event));
+  }
+  if (event.status === 'live') {
     const view = linkTo(`#/event/${event.id}`, 'View event');
     view.className = 'text-link event-row__link';
     lines.push(view);
