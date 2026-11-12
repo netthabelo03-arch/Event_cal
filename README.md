@@ -86,7 +86,7 @@ Manual test cases for this sprint are in [docs/sprint-1-test-cases.md](docs/spri
 
 ## Events (Sprint 2)
 
-A person whose role is Host can post an event from **My events**: a video clip of at most 30 seconds (MP4, WebM or MOV, up to 50 MB), the event's name, date, start time, venue, category and an optional description. The event then waits in the **Review queue**, where an admin watches the clip and approves or rejects it with a reason. Approved events appear under "Upcoming events" on Discover and have their own page with the full clip. Event times are always Johannesburg time.
+A person whose role is Host can post an event from **My events**: a video clip of at most 30 seconds (MP4, WebM or MOV, up to 50 MB), the event's name, date, start time, venue, category and an optional description. The event then waits in the **Review queue**, where an admin watches the clip and approves or rejects it with a reason. Approved events appear under "Upcoming events" on Discover, where each clip plays its first 5 seconds by itself, muted, one after another. Clicking an event opens its page, where the full clip (at most 30 seconds) starts playing by itself. Clips do not play by themselves for people whose device asks for reduced motion or data saving. Event times are always Johannesburg time.
 
 One-time setup in the Supabase dashboard:
 

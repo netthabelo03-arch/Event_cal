@@ -22,3 +22,7 @@ Before testing, run `supabase/002_events.sql` in the Supabase SQL Editor and mak
 | S2-16 | Live on Discover | Log out and open Discover. | "Upcoming events" shows the approved event with its date, time and venue. The sample events are gone; sample hosts and music remain. |
 | S2-17 | Event page | Signed out, click the event; log in when asked. | After logging in, the event page opens with the full clip, name, date, time, venue, host name and description. |
 | S2-18 | Times are Johannesburg time | Compare the time on the event page with what the host entered. | They match exactly. |
+| S2-19 | 5-second previews play by themselves | With two or more live events, open Discover and watch the "Upcoming events" row without clicking. | The first clip plays muted for 5 seconds with a green outline, then the next one plays, and after the last the first plays again. |
+| S2-20 | Previews stop when leaving | While previews play, click an event or scroll the row out of view. | The previews stop; scrolling back starts them again. |
+| S2-21 | Full clip plays after clicking | Click an event (log in if asked). | The event page opens and the clip starts by itself from the beginning. If the browser starts it muted, the sound can be turned on with the controls. It never plays past 30 seconds. |
+| S2-22 | No autoplay when saving data | On a phone with Data Saver (or reduce motion) switched on, open Discover. | Clips do not play by themselves; they can still be opened and played by hand. |

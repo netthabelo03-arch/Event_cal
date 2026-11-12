@@ -3,6 +3,8 @@
 // artist pages, are placeholders until later sprints.
 
 import { getEvent, clipUrl } from '../events/api.js';
+import { autoplayFull } from '../events/preview.js';
+import { MAX_CLIP_SECONDS } from '../rules/clip.js';
 import { CATEGORIES, formatWhen, isEventId, statusOf } from '../events/rules.js';
 import { friendlyAuthError } from '../auth/errors.js';
 import { findSample, initials } from '../sample.js';
@@ -28,8 +30,14 @@ async function realEvent(id, viewerId) {
     return [el('h1', { class: 'title', text: 'Not found' }), el('p', { class: 'lead', text: 'This event is no longer available.' })];
   }
 
-  const video = el('video', { class: 'clip', controls: '', preload: 'metadata', playsinline: '' });
+  const video = el('video', { class: 'clip', controls: '', preload: 'auto', playsinline: '' });
   video.src = await clipUrl(event.clip_path);
+  // Never play past the 30-second limit, even if a longer clip got through.
+  video.addEventListener('timeupdate', () => {
+    if (video.currentTime >= MAX_CLIP_SECONDS) video.pause();
+  });
+  // Start as soon as the screen is shown.
+  setTimeout(() => autoplayFull(video), 0);
   const categoryName = CATEGORIES.find((item) => item.id === event.category)?.name ?? '';
 
   const parts = [video];

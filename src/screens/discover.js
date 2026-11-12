@@ -2,7 +2,8 @@
 // Browsing is open. Clicking an item opens its details, which asks a
 // signed-out person to log in first (see router.js and app.js).
 
-import { listLiveEvents } from '../events/api.js';
+import { listLiveEvents, clipUrl } from '../events/api.js';
+import { startPreviews } from '../events/preview.js';
 import { formatWhen } from '../events/rules.js';
 import { SAMPLE_SECTIONS, initials } from '../sample.js';
 import { hashFor } from '../router.js';
@@ -25,6 +26,28 @@ function section({ kind, title, items }) {
   ]);
 }
 
+/** A card for a real event: its clip stands where the picture goes. */
+async function eventCard(event) {
+  const video = el('video', { class: 'card__art card__clip', muted: '', playsinline: '', preload: 'metadata', 'aria-hidden': 'true' });
+  video.muted = true;
+  video.src = await clipUrl(event.clip_path);
+  const node = el('a', { class: 'card card--event', href: hashFor({ screen: 'detail', kind: 'event', id: event.id }) }, [
+    video,
+    el('span', { class: 'card__title', text: event.title }),
+    el('span', { class: 'card__meta', text: `${formatWhen(event.starts_at)} · ${event.venue}` }),
+  ]);
+  return { node, video };
+}
+
+/** The row of real events. Each clip plays its first seconds in turn. */
+async function liveSection(events) {
+  const cards = await Promise.all(events.map(eventCard));
+  const row = el('div', { class: 'row' }, cards.map((item) => item.node));
+  // Start once the row is on the page; startPreviews waits until it is visible.
+  setTimeout(() => startPreviews(row, cards.map((item) => item.video)), 0);
+  return el('section', { class: 'section' }, [el('h2', { class: 'section__title', text: 'Upcoming events' }), row]);
+}
+
 export async function renderDiscover({ session }) {
   // Both are allowed to fail: browsing must still work without them.
   const [{ profile, admin }, liveEvents] = await Promise.all([
@@ -44,11 +67,7 @@ export async function renderDiscover({ session }) {
   // the sample events are dropped; sample hosts and music stay until those are real too.
   let samples = SAMPLE_SECTIONS;
   if (liveEvents.length > 0) {
-    content.push(section({
-      kind: 'event',
-      title: 'Upcoming events',
-      items: liveEvents.map((event) => ({ id: event.id, title: event.title, meta: `${formatWhen(event.starts_at)} · ${event.venue}` })),
-    }));
+    content.push(await liveSection(liveEvents));
     samples = SAMPLE_SECTIONS.filter((sample) => sample.kind !== 'event');
     content.push(el('p', { class: 'notice', text: 'The hosts and music below are samples for now.' }));
   } else {
