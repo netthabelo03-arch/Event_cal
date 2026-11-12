@@ -33,7 +33,7 @@ The app is built in sprints. Each sprint has its own branch, its own folder of c
 | 8 | Artists and the music feed | An artist's clip appears under Music |
 | 9 | Legal pages, reporting, error states, launch checks | Ready for real users |
 
-Defects are recorded in [docs/defect-log.md](docs/defect-log.md).
+Defects are recorded in [docs/defect-log.md](docs/defect-log.md). Ideas for later are kept in [docs/backlog.md](docs/backlog.md).
 
 ## How it is built
 
