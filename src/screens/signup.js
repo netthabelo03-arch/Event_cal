@@ -2,19 +2,20 @@
 // adding a name, happen later in the profile.
 
 import { signUp } from '../auth/api.js';
-import { checkSignUp } from '../auth/validate.js';
+import { checkSignUp, passwordRules } from '../auth/validate.js';
 import { friendlyAuthError } from '../auth/errors.js';
-import { el, brand, field, messageBox, linkTo, whileBusy } from '../dom.js';
+import { el, brand, field, messageBox, linkTo, whileBusy, passwordChecklist } from '../dom.js';
 
 export function renderSignUp() {
   const email = field({ id: 'email', label: 'Email address', type: 'email', autocomplete: 'email' });
-  const password = field({ id: 'password', label: 'Password (at least 8 characters)', type: 'password', autocomplete: 'new-password' });
+  const password = field({ id: 'password', label: 'Password', type: 'password', autocomplete: 'new-password' });
   const message = messageBox();
   const submit = el('button', { type: 'submit', class: 'button button--primary', text: 'Sign up' });
 
   const form = el('form', { class: 'form', novalidate: '' }, [
     email.node,
     password.node,
+    passwordChecklist(password.input, passwordRules),
     message.node,
     el('div', { class: 'push-down stack' }, [
       submit,

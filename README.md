@@ -68,7 +68,7 @@ Plain HTML, CSS and JavaScript. There is no framework and nothing to install.
 
 ## Accounts (Sprint 1)
 
-Anyone can browse Discover without an account. Clicking an item (an event, a host or an artist) asks a signed-out person to log in, and brings them back to that item afterwards. Signing up takes an email and a password, confirmed once by an emailed link; after that the person stays signed in on the device. Everyone starts as a Goer; a name, and switching to Host or Artist, are optional steps in the profile. Accounts and profiles are kept in Supabase.
+Anyone can browse Discover without an account. Clicking an item (an event, a host or an artist) asks a signed-out person to log in, and brings them back to that item afterwards. Signing up takes an email and a strong password (8+ characters with a capital letter, a small letter, a number and a symbol), confirmed once by an emailed link; after that the person stays signed in on the device. Everyone starts as a Goer; a name, and switching to Host or Artist, are optional steps in the profile. Accounts and profiles are kept in Supabase.
 
 Until hosts can post events (Sprint 2), Discover shows sample items from `src/sample.js`. They are not real events.
 

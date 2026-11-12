@@ -22,10 +22,28 @@ export function checkEmail(value) {
   return null;
 }
 
+/**
+ * The rules a new password must meet, with whether this value meets each one.
+ * The screens show this list as a checklist while the person types.
+ * @returns {{ id: string, label: string, met: boolean }[]}
+ */
+export function passwordRules(value) {
+  const password = String(value ?? '');
+  return [
+    { id: 'length', label: `At least ${MIN_PASSWORD_LENGTH} characters`, met: password.length >= MIN_PASSWORD_LENGTH },
+    { id: 'upper', label: 'A capital letter', met: /\p{Lu}/u.test(password) },
+    { id: 'lower', label: 'A small letter', met: /\p{Ll}/u.test(password) },
+    { id: 'number', label: 'A number', met: /[0-9]/.test(password) },
+    { id: 'symbol', label: 'A symbol, such as ! ? @ #', met: /[^\p{L}\p{N}\s]/u.test(password) },
+  ];
+}
+
+/** Check a new password (sign-up and password reset). Logging in does not use this. */
 export function checkPassword(value) {
   const password = String(value ?? '');
   if (password.length === 0) return 'Enter a password.';
-  if (password.length < MIN_PASSWORD_LENGTH) return `Use at least ${MIN_PASSWORD_LENGTH} characters for your password.`;
+  const missing = passwordRules(password).filter((rule) => !rule.met);
+  if (missing.length > 0) return 'Your password is not strong enough yet. See the list below.';
   return null;
 }
 

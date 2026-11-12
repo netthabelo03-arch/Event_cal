@@ -1,17 +1,18 @@
 // Shown after opening the link in a password-reset email: choose a new password.
 
 import { setNewPassword } from '../auth/api.js';
-import { checkPassword } from '../auth/validate.js';
+import { checkPassword, passwordRules } from '../auth/validate.js';
 import { friendlyAuthError } from '../auth/errors.js';
-import { el, brand, field, messageBox, whileBusy } from '../dom.js';
+import { el, brand, field, messageBox, whileBusy, passwordChecklist } from '../dom.js';
 
 export function renderNewPassword({ navigate }) {
-  const password = field({ id: 'password', label: 'New password (at least 8 characters)', type: 'password', autocomplete: 'new-password' });
+  const password = field({ id: 'password', label: 'New password', type: 'password', autocomplete: 'new-password' });
   const message = messageBox();
   const submit = el('button', { type: 'submit', class: 'button button--primary', text: 'Save new password' });
 
   const form = el('form', { class: 'form', novalidate: '' }, [
     password.node,
+    passwordChecklist(password.input, passwordRules),
     message.node,
     el('div', { class: 'push-down' }, [submit]),
   ]);

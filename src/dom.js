@@ -98,3 +98,33 @@ export async function whileBusy(button, busyText, action) {
     button.textContent = label;
   }
 }
+
+/**
+ * A checklist under a new-password box that ticks off each rule as the person types.
+ * @param {HTMLInputElement} input the password box
+ * @param {(value: string) => { id: string, label: string, met: boolean }[]} rulesFor
+ * @returns {HTMLElement}
+ */
+export function passwordChecklist(input, rulesFor) {
+  const list = el('ul', { class: 'rules', 'aria-label': 'Password must have' });
+  const rows = rulesFor('').map((rule) => {
+    const mark = el('span', { class: 'rules__mark', 'aria-hidden': 'true' });
+    const status = el('span', { class: 'rules__status' });
+    const row = el('li', { class: 'rules__item' }, [mark, el('span', { text: rule.label }), status]);
+    list.append(row);
+    return { id: rule.id, row, mark, status };
+  });
+  function update() {
+    const rules = rulesFor(input.value);
+    for (const { id, row, mark, status } of rows) {
+      const met = rules.find((rule) => rule.id === id)?.met === true;
+      row.className = met ? 'rules__item rules__item--met' : 'rules__item';
+      mark.textContent = met ? '✓' : '•';
+      // Read out by screen readers, hidden from view.
+      status.textContent = met ? ' (done)' : ' (still needed)';
+    }
+  }
+  input.addEventListener('input', update);
+  update();
+  return list;
+}
