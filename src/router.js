@@ -8,7 +8,7 @@
 const DISCOVER = { screen: 'discover' };
 
 /** Screens whose address is just their name, like "#/signin". */
-const NAMED_SCREENS = ['signup', 'signin', 'forgot', 'new-password', 'profile', 'my-events', 'new-event', 'review'];
+const NAMED_SCREENS = ['signup', 'signin', 'forgot', 'new-password', 'profile', 'my-events', 'new-event', 'review', 'feed', 'search'];
 
 /** The kinds of item that have a details screen. */
 export const ITEM_KINDS = ['event', 'host', 'artist'];
@@ -25,7 +25,10 @@ export const GUEST_SCREENS = ['signup', 'signin', 'forgot'];
 export const SHOWCASE_SCREENS = [...GUEST_SCREENS, 'new-password'];
 
 /** Screens that use the full width on big screens. */
-export const WIDE_SCREENS = ['discover', 'detail'];
+export const WIDE_SCREENS = ['discover', 'detail', 'search'];
+
+/** Screens that fill the whole window, edge to edge. */
+export const FULL_SCREENS = ['feed'];
 
 /**
  * @param {string} hash the address hash, for example "#/event/jazz-night"

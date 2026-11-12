@@ -2,16 +2,17 @@
 // Browsing is open. Clicking an item opens its details, which asks a
 // signed-out person to log in first (see router.js and app.js).
 
-import { listLiveEvents, clipUrl } from '../events/api.js';
+import { listLiveEvents } from '../events/api.js';
 import { startPreviews } from '../events/preview.js';
-import { formatWhen } from '../events/rules.js';
+import { hostsFrom } from '../events/discovery.js';
+import { eventCard, hostCard } from '../events/cards.js';
 import { SAMPLE_SECTIONS, initials } from '../sample.js';
 import { hashFor } from '../router.js';
 import { loadViewer } from '../viewer.js';
 import { topBar } from '../usermenu.js';
 import { el, linkTo } from '../dom.js';
 
-function card(kind, item) {
+function sampleCard(kind, item) {
   return el('a', { class: `card card--${kind}`, href: hashFor({ screen: 'detail', kind, id: item.id }) }, [
     el('span', { class: 'card__art', 'aria-hidden': 'true', text: initials(item.title) }),
     el('span', { class: 'card__title', text: item.title }),
@@ -19,33 +20,18 @@ function card(kind, item) {
   ]);
 }
 
-function section({ kind, title, items }) {
-  return el('section', { class: 'section' }, [
-    el('h2', { class: 'section__title', text: title }),
-    el('div', { class: 'row' }, items.map((item) => card(kind, item))),
-  ]);
-}
-
-/** A card for a real event: its clip stands where the picture goes. */
-async function eventCard(event) {
-  const video = el('video', { class: 'card__art card__clip', muted: '', playsinline: '', preload: 'metadata', 'aria-hidden': 'true' });
-  video.muted = true;
-  video.src = await clipUrl(event.clip_path);
-  const node = el('a', { class: 'card card--event', href: hashFor({ screen: 'detail', kind: 'event', id: event.id }) }, [
-    video,
-    el('span', { class: 'card__title', text: event.title }),
-    el('span', { class: 'card__meta', text: `${formatWhen(event.starts_at)} · ${event.venue}` }),
-  ]);
-  return { node, video };
+function section(title, cards) {
+  return el('section', { class: 'section' }, [el('h2', { class: 'section__title', text: title }), el('div', { class: 'row' }, cards)]);
 }
 
 /** The row of real events. Each clip plays its first seconds in turn. */
 async function liveSection(events) {
   const cards = await Promise.all(events.map(eventCard));
-  const row = el('div', { class: 'row' }, cards.map((item) => item.node));
+  const node = section('Upcoming events', cards.map((card) => card.node));
+  const row = node.children[1];
   // Start once the row is on the page; startPreviews waits until it is visible.
-  setTimeout(() => startPreviews(row, cards.map((item) => item.video)), 0);
-  return el('section', { class: 'section' }, [el('h2', { class: 'section__title', text: 'Upcoming events' }), row]);
+  setTimeout(() => startPreviews(row, cards.map((card) => card.video)), 0);
+  return node;
 }
 
 export async function renderDiscover({ session }) {
@@ -55,25 +41,35 @@ export async function renderDiscover({ session }) {
     listLiveEvents().catch(() => []),
   ]);
 
+  const actions = [linkTo('#/search', 'Search events')];
+  actions[0].className = 'button button--quiet button--small';
+  if (liveEvents.length > 0) {
+    actions.unshift(el('a', { href: '#/feed', class: 'button button--primary button--small', text: 'Watch the feed' }));
+  }
+
   const content = [
     topBar({ profile, session, admin }),
     el('div', { class: 'stack' }, [
       el('h1', { class: 'title', text: "Never miss what's on." }),
       el('p', { class: 'lead', text: 'Short event clips. Reminders. Tickets.' }),
     ]),
+    el('div', { class: 'actions' }, actions),
   ];
 
-  // Real events, approved by an admin, come first. Once there is at least one,
-  // the sample events are dropped; sample hosts and music stay until those are real too.
-  let samples = SAMPLE_SECTIONS;
+  const music = SAMPLE_SECTIONS.find((sample) => sample.kind === 'artist');
+  const musicSection = section(music.title, music.items.map((item) => sampleCard('artist', item)));
+
   if (liveEvents.length > 0) {
     content.push(await liveSection(liveEvents));
-    samples = SAMPLE_SECTIONS.filter((sample) => sample.kind !== 'event');
-    content.push(el('p', { class: 'notice', text: 'The hosts and music below are samples for now.' }));
+    content.push(section('Popular hosts', hostsFrom(liveEvents).slice(0, 12).map(hostCard)));
+    content.push(el('p', { class: 'notice', text: 'The music below is a sample until artists can post (Sprint 8).' }));
+    content.push(musicSection);
   } else {
     content.push(el('p', { class: 'notice', text: 'Sample items are shown while the first real events are being added.' }));
+    for (const sample of SAMPLE_SECTIONS) {
+      content.push(section(sample.title, sample.items.map((item) => sampleCard(sample.kind, item))));
+    }
   }
-  content.push(...samples.map(section));
 
   if (profile?.role === 'host') {
     content.push(el('p', { class: 'link-row' }, ['You are signed in as a Host. ', linkTo('#/new-event', 'Promote an event')]));

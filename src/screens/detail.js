@@ -2,7 +2,9 @@
 // A real event shows its full clip and details. Sample items, and host and
 // artist pages, are placeholders until later sprints.
 
-import { getEvent, clipUrl } from '../events/api.js';
+import { getEvent, clipUrl, listHostEvents, recordView } from '../events/api.js';
+import { noteView, upcomingLabel } from '../events/discovery.js';
+import { eventCard } from '../events/cards.js';
 import { autoplayFull } from '../events/preview.js';
 import { MAX_CLIP_SECONDS } from '../rules/clip.js';
 import { CATEGORIES, formatWhen, isEventId, statusOf } from '../events/rules.js';
@@ -18,6 +20,51 @@ const COMING = {
   host: 'Host pages arrive with the Discover feed in Sprint 3.',
   artist: 'Artist pages arrive with the music feed in Sprint 8.',
 };
+
+const SEEN_KEY = 'event-cal.views';
+
+/** Count a view at most once a day per event on this device. Never blocks the page. */
+function countView(eventId) {
+  let seen = {};
+  try {
+    seen = JSON.parse(window.localStorage.getItem(SEEN_KEY) ?? '{}');
+  } catch {
+    seen = {};
+  }
+  const result = noteView(seen, eventId, Date.now());
+  try {
+    window.localStorage.setItem(SEEN_KEY, JSON.stringify(result.seen));
+  } catch {
+    // Without storage every visit counts; that is acceptable.
+  }
+  if (result.count) recordView(eventId).catch(() => {});
+}
+
+/** A real host's page: their name and upcoming events. */
+async function realHost(hostId) {
+  let events;
+  try {
+    events = await listHostEvents(hostId);
+  } catch (error) {
+    return [el('p', { class: 'message message--error', role: 'alert', text: friendlyAuthError(error) })];
+  }
+  if (events.length === 0) {
+    return [el('h1', { class: 'title', text: 'No upcoming events' }), el('p', { class: 'lead', text: 'This host has nothing coming up right now.' })];
+  }
+  const name = events.find((event) => event.host_name)?.host_name || 'A host';
+  const cards = await Promise.all(events.map(eventCard));
+  return [
+    el('div', { class: 'detail detail--host' }, [
+      el('span', { class: 'card__art detail__art', 'aria-hidden': 'true', text: initials(name) || 'H' }),
+      el('div', { class: 'stack' }, [
+        el('p', { class: 'caption', text: 'Host' }),
+        el('h1', { class: 'title', text: name }),
+        el('p', { class: 'lead', text: upcomingLabel(events.length) }),
+      ]),
+    ]),
+    el('div', { class: 'grid' }, cards.map((card) => card.node)),
+  ];
+}
 
 async function realEvent(id, viewerId) {
   let event;
@@ -51,11 +98,13 @@ async function realEvent(id, viewerId) {
       el('p', { class: 'caption', text: categoryName ? `Event · ${categoryName}` : 'Event' }),
       el('h1', { class: 'title', text: event.title }),
       el('p', { class: 'lead', text: `${formatWhen(event.starts_at)} · ${event.venue}, ${event.city}` }),
-      el('p', { class: 'event-row__meta', text: `Hosted by ${event.host_name || 'a host'}` }),
+      el('p', { class: 'event-row__meta' }, ['Hosted by ', linkTo(`#/host/${event.host_id}`, event.host_name || 'a host')]),
     ]),
   );
   if (event.description) parts.push(el('p', { class: 'detail__text', text: event.description }));
   parts.push(el('p', { class: 'notice', text: 'Reminders arrive in Sprint 4 and tickets in Sprint 5.' }));
+  // Count the view, except the host's own visits and visits not yet live.
+  if (event.status === 'live' && event.host_id !== viewerId) countView(event.id);
   return parts;
 }
 
@@ -67,6 +116,9 @@ export async function renderDetail({ session, kind, id }) {
 
   if (kind === 'event' && isEventId(id)) {
     return [bar, back, ...(await realEvent(id, session.user.id))];
+  }
+  if (kind === 'host' && isEventId(id)) {
+    return [bar, back, ...(await realHost(id))];
   }
 
   const item = findSample(kind, id);

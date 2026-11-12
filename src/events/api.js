@@ -3,9 +3,10 @@
 
 import { getClient } from '../auth/client.js';
 import { clipPath, startsAtIso } from './rules.js';
+import { cleanSearch } from './discovery.js';
 
 const BUCKET = 'clips';
-const COLUMNS = 'id, host_id, host_name, title, description, starts_at, venue, city, category, clip_path, clip_seconds, status, reject_reason, created_at';
+const COLUMNS = 'id, host_id, host_name, title, description, starts_at, venue, city, category, clip_path, clip_seconds, status, reject_reason, created_at, view_count';
 
 /** @returns {Promise<boolean>} whether the signed-in person is an admin */
 export async function isAdmin() {
@@ -63,7 +64,7 @@ export async function listMyEvents(userId) {
 }
 
 /** Live events that have not started yet, soonest first. Works signed out. */
-export async function listLiveEvents(limit = 20) {
+export async function listLiveEvents(limit = 50) {
   const client = await getClient();
   const { data, error } = await client
     .from('events')
@@ -109,4 +110,44 @@ export async function reviewEvent(id, { approve, reason = '' }) {
   if (error) throw error;
   if (data === null) throw { code: 'review_not_applied' };
   return data;
+}
+
+/**
+ * Search live events. Works signed out.
+ * @param {{ text?: string, category?: string | null, from: string, to: string | null }} filters
+ */
+export async function searchEvents({ text = '', category = null, from, to }) {
+  const client = await getClient();
+  let query = client.from('events').select(COLUMNS).eq('status', 'live').gte('starts_at', from);
+  if (to) query = query.lte('starts_at', to);
+  if (category) query = query.eq('category', category);
+  const words = cleanSearch(text);
+  if (words) {
+    const pattern = `%${words}%`;
+    query = query.or(`title.ilike.${pattern},venue.ilike.${pattern},host_name.ilike.${pattern}`);
+  }
+  const { data, error } = await query.order('starts_at', { ascending: true }).limit(50);
+  if (error) throw error;
+  return data;
+}
+
+/** A host's upcoming live events, soonest first. */
+export async function listHostEvents(hostId) {
+  const client = await getClient();
+  const { data, error } = await client
+    .from('events')
+    .select(COLUMNS)
+    .eq('host_id', hostId)
+    .eq('status', 'live')
+    .gte('starts_at', new Date().toISOString())
+    .order('starts_at', { ascending: true });
+  if (error) throw error;
+  return data;
+}
+
+/** Add one view to a live event. */
+export async function recordView(eventId) {
+  const client = await getClient();
+  const { error } = await client.rpc('record_view', { p_event_id: eventId });
+  if (error) throw error;
 }

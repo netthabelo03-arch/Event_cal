@@ -7,6 +7,11 @@ import { friendlyAuthError } from './auth/errors.js';
 import { el, icon, brand, whileBusy } from './dom.js';
 
 const CHEVRON = '<path d="M6 9l6 6 6-6"></path>';
+const SEARCH = '<circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path>';
+
+function searchButton() {
+  return el('a', { href: '#/search', class: 'icon-button', 'aria-label': 'Search events' }, [icon(SEARCH, 20)]);
+}
 
 /**
  * The name to show on the menu button: first name, else the part of the
@@ -39,7 +44,7 @@ export function topBar({ profile, session, admin = false }) {
   if (!session) {
     const signUp = el('a', { href: '#/signup', class: 'topbar__link', text: 'Sign up' });
     const logIn = el('a', { href: '#/signin', class: 'button button--primary button--small', text: 'Log in' });
-    return el('header', { class: 'topbar' }, [brand(), el('div', { class: 'topbar__actions' }, [signUp, logIn])]);
+    return el('header', { class: 'topbar' }, [brand(), el('div', { class: 'topbar__actions' }, [searchButton(), signUp, logIn])]);
   }
 
   const name = displayName(profile, session);
@@ -99,5 +104,5 @@ export function topBar({ profile, session, admin = false }) {
     }
   }));
 
-  return el('header', { class: 'topbar' }, [brand(), menu]);
+  return el('header', { class: 'topbar' }, [brand(), el('div', { class: 'topbar__actions' }, [searchButton(), menu])]);
 }

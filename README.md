@@ -61,19 +61,20 @@ Plain HTML, CSS and JavaScript. There is no framework and nothing to install.
 | `tests/` | Automated tests |
 | `docs/defect-log.md` | The defect log |
 
-## What works so far (Sprints 0 to 2)
+## What works so far (Sprints 0 to 3)
 
 - Discover, open to everyone, with sample events, hosts and music.
 - Item details that need a log-in, returning to the clicked item afterwards.
 - Sign up with an email and a password, log in, forgot password, profile (name and role) and log out from the menu under the person's name.
 - Hosts post an event with a clip of at most 30 seconds; admins approve or reject it; approved events show on Discover with their own page.
+- A full-screen feed of 5-second previews, search with category and date filters, real host pages, and view counts for hosts.
 - The app can be added to a phone's home screen.
 
 ## Accounts (Sprint 1)
 
 Anyone can browse Discover without an account. Clicking an item (an event, a host or an artist) asks a signed-out person to log in, and brings them back to that item afterwards. Signing up takes an email and a strong password (8+ characters with a capital letter, a small letter, a number and a symbol), confirmed once by an emailed link; after that the person stays signed in on the device. Everyone starts as a Goer; a name, and switching to Host or Artist, are optional steps in the profile. Accounts and profiles are kept in Supabase.
 
-Until real content exists, Discover shows sample items from `src/sample.js`. Sample events disappear as soon as one real event is live; sample hosts and music stay until those are built.
+Until real content exists, Discover shows sample items from `src/sample.js`. Sample events and hosts disappear as soon as one real event is live; sample music stays until artists can post (Sprint 8).
 
 One-time setup in the Supabase dashboard:
 
@@ -100,6 +101,19 @@ Things to know:
 - Hosts cannot edit or delete an event yet. That arrives with the manage-event screen in a later sprint.
 
 Manual test cases for this sprint are in [docs/sprint-2-test-cases.md](docs/sprint-2-test-cases.md).
+
+## The feed, search and hosts (Sprint 3)
+
+- **Feed:** "Watch the feed" on Discover shows live events one at a time, full screen. Each clip plays muted for 5 seconds, then the feed moves to the next by itself; scrolling by hand works too. Tapping a clip opens the event.
+- **Search:** find live events by words (event name, venue or host), category, and date: today, this weekend or the next 7 days, in Johannesburg time.
+- **Hosts:** "Popular hosts" on Discover lists the real hosts of live events, busiest first. Each has a page with their upcoming events, also reached from the host's name on an event page.
+- **Views:** opening an event's page counts one view, at most once a day per device, and never for the host's own visits. Hosts see the count in My events. Views will also feed the Trending grid (backlog B-001).
+
+One-time setup: in the Supabase SQL Editor, run [`supabase/003_views.sql`](supabase/003_views.sql).
+
+The view count is a guide, not an audit: someone determined could inflate it, because counting happens from the browser.
+
+Manual test cases for this sprint are in [docs/sprint-3-test-cases.md](docs/sprint-3-test-cases.md).
 
 ## Opening the app
 

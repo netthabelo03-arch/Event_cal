@@ -1,7 +1,7 @@
 // Starts the app: finds out whether someone is signed in, shows the right
 // screen for the address, and keeps both in step.
 
-import { parseRoute, resolveRoute, hashFor, PROTECTED_SCREENS, SHOWCASE_SCREENS, WIDE_SCREENS } from './router.js';
+import { parseRoute, resolveRoute, hashFor, PROTECTED_SCREENS, SHOWCASE_SCREENS, WIDE_SCREENS, FULL_SCREENS } from './router.js';
 import { currentSession, onAuthChange } from './auth/api.js';
 import { saveNext, takeNext } from './next.js';
 import { el, brand } from './dom.js';
@@ -15,6 +15,8 @@ import { renderProfile } from './screens/profile.js';
 import { renderMyEvents } from './screens/myevents.js';
 import { renderNewEvent } from './screens/newevent.js';
 import { renderReview } from './screens/review.js';
+import { renderFeed } from './screens/feed.js';
+import { renderSearch } from './screens/search.js';
 import { forgetViewer } from './viewer.js';
 
 const SCREENS = {
@@ -28,6 +30,8 @@ const SCREENS = {
   'my-events': renderMyEvents,
   'new-event': renderNewEvent,
   review: renderReview,
+  feed: renderFeed,
+  search: renderSearch,
 };
 
 const root = document.getElementById('app');
@@ -63,6 +67,7 @@ async function show() {
 
   document.body.classList.toggle('with-showcase', SHOWCASE_SCREENS.includes(route.screen));
   document.body.classList.toggle('wide', WIDE_SCREENS.includes(route.screen));
+  document.body.classList.toggle('full', FULL_SCREENS.includes(route.screen));
 
   // Screens that fetch data are slow; if the person moves on meanwhile,
   // only the newest screen may be drawn.

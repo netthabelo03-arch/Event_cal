@@ -3,6 +3,7 @@
 
 import { listMyEvents } from '../events/api.js';
 import { statusOf, formatWhen } from '../events/rules.js';
+import { viewsLabel } from '../events/discovery.js';
 import { friendlyAuthError } from '../auth/errors.js';
 import { loadViewer } from '../viewer.js';
 import { topBar } from '../usermenu.js';
@@ -19,6 +20,7 @@ function eventRow(event) {
     lines.push(el('span', { class: 'event-row__meta', text: `Reason: ${event.reject_reason}` }));
   }
   if (event.status === 'live') {
+    lines.push(el('span', { class: 'event-row__meta', text: viewsLabel(event.view_count) }));
     const view = linkTo(`#/event/${event.id}`, 'View event');
     view.className = 'text-link event-row__link';
     lines.push(view);

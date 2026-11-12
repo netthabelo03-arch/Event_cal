@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   parseRoute, resolveRoute, hashFor, safeNext,
-  PROTECTED_SCREENS, GUEST_SCREENS, SHOWCASE_SCREENS, WIDE_SCREENS, ITEM_KINDS,
+  PROTECTED_SCREENS, GUEST_SCREENS, SHOWCASE_SCREENS, WIDE_SCREENS, FULL_SCREENS, ITEM_KINDS,
 } from '../src/router.js';
 import { ROLES, findRole, isRole } from '../src/roles.js';
 
@@ -13,7 +13,7 @@ test('an empty address shows Discover', () => {
 });
 
 test('named screens are understood', () => {
-  for (const screen of ['signup', 'signin', 'forgot', 'new-password', 'profile', 'my-events', 'new-event', 'review']) {
+  for (const screen of ['signup', 'signin', 'forgot', 'new-password', 'profile', 'my-events', 'new-event', 'review', 'feed', 'search']) {
     assert.deepEqual(parseRoute(`#/${screen}`), { screen });
   }
 });
@@ -30,9 +30,17 @@ test('an unknown or malformed address falls back to Discover', () => {
   for (const hash of bad) assert.deepEqual(parseRoute(hash), { screen: 'discover' });
 });
 
-test('anyone may browse Discover, signed in or not', () => {
-  assert.deepEqual(resolveRoute({ screen: 'discover' }, false), { screen: 'discover' });
-  assert.deepEqual(resolveRoute({ screen: 'discover' }, true), { screen: 'discover' });
+test('anyone may browse Discover, the feed and search, signed in or not', () => {
+  for (const screen of ['discover', 'feed', 'search']) {
+    assert.deepEqual(resolveRoute({ screen }, false), { screen });
+    assert.deepEqual(resolveRoute({ screen }, true), { screen });
+  }
+});
+
+test('a real host page needs a log-in like any item', () => {
+  const route = parseRoute('#/host/3f2c1a9e-8b7d-4c6a-9e5f-0a1b2c3d4e5f');
+  assert.deepEqual(route, { screen: 'detail', kind: 'host', id: '3f2c1a9e-8b7d-4c6a-9e5f-0a1b2c3d4e5f' });
+  assert.deepEqual(resolveRoute(route, false), { screen: 'signin' });
 });
 
 test('a signed-out person who opens an item or the profile is asked to log in', () => {
@@ -77,11 +85,12 @@ test('only item and profile addresses are remembered for after log-in', () => {
 
 test('the moving panel shows beside the log-in screens only', () => {
   for (const screen of ['signup', 'signin', 'forgot', 'new-password']) assert.equal(SHOWCASE_SCREENS.includes(screen), true);
-  for (const screen of ['discover', 'detail', 'profile', 'my-events', 'new-event', 'review']) assert.equal(SHOWCASE_SCREENS.includes(screen), false);
+  for (const screen of ['discover', 'detail', 'profile', 'my-events', 'new-event', 'review', 'feed', 'search']) assert.equal(SHOWCASE_SCREENS.includes(screen), false);
 });
 
-test('Discover and item details use the full width', () => {
-  assert.deepEqual(WIDE_SCREENS, ['discover', 'detail']);
+test('Discover, item details and search use the full width; the feed fills the window', () => {
+  assert.deepEqual(WIDE_SCREENS, ['discover', 'detail', 'search']);
+  assert.deepEqual(FULL_SCREENS, ['feed']);
 });
 
 test('the three launch roles are Goer, Host and Artist', () => {
