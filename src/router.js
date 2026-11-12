@@ -8,7 +8,7 @@
 const DISCOVER = { screen: 'discover' };
 
 /** Screens whose address is just their name, like "#/signin". */
-const NAMED_SCREENS = ['signup', 'signin', 'forgot', 'new-password', 'profile', 'my-events', 'new-event', 'review', 'feed', 'search'];
+const NAMED_SCREENS = ['signup', 'signin', 'forgot', 'new-password', 'profile', 'my-events', 'new-event', 'review', 'feed', 'search', 'reminders'];
 
 /** The kinds of item that have a details screen. */
 export const ITEM_KINDS = ['event', 'host', 'artist'];
@@ -16,7 +16,7 @@ export const ITEM_KINDS = ['event', 'host', 'artist'];
 const ITEM_ID = /^[a-z0-9][a-z0-9-]{0,63}$/;
 
 /** Screens that only a signed-in person may open. */
-export const PROTECTED_SCREENS = ['detail', 'profile', 'new-password', 'my-events', 'new-event', 'review'];
+export const PROTECTED_SCREENS = ['detail', 'profile', 'new-password', 'my-events', 'new-event', 'review', 'reminders'];
 
 /** Screens that make no sense once signed in. */
 export const GUEST_SCREENS = ['signup', 'signin', 'forgot'];

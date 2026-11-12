@@ -639,3 +639,10 @@ body.full .app { max-width: none; padding: 0; gap: 0; }
 .feed__video,
 .feed__video:is(*) { object-fit: contain; background: transparent; }
 @media (max-width: 480px) { .feed__video { object-fit: contain; } }
+
+/* Sprint 4: reminders. */
+.reminder-box { padding: 16px; background: var(--color-surface); border-radius: var(--radius-card); }
+.phone-panel .notice { margin: 0; }
+.event-row__link-title { color: var(--color-text); text-decoration: none; }
+.event-row__link-title:hover { color: var(--color-accent-hover); }
+.event-row .button--small { align-self: flex-start; margin-top: 4px; }

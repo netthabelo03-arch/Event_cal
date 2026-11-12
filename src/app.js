@@ -17,6 +17,7 @@ import { renderNewEvent } from './screens/newevent.js';
 import { renderReview } from './screens/review.js';
 import { renderFeed } from './screens/feed.js';
 import { renderSearch } from './screens/search.js';
+import { renderReminders } from './screens/reminders.js';
 import { forgetViewer } from './viewer.js';
 
 const SCREENS = {
@@ -32,6 +33,7 @@ const SCREENS = {
   review: renderReview,
   feed: renderFeed,
   search: renderSearch,
+  reminders: renderReminders,
 };
 
 const root = document.getElementById('app');

@@ -2,7 +2,7 @@
 // It always tries the network first, so people get the newest version,
 // and only falls back to the saved copy when there is no connection.
 
-const CACHE = 'event-cal-shell-v2';
+const CACHE = 'event-cal-shell-v3';
 
 self.addEventListener('install', () => {
   self.skipWaiting();
@@ -34,4 +34,40 @@ self.addEventListener('fetch', (event) => {
       })
       .catch(() => caches.match(request).then((saved) => saved ?? Response.error())),
   );
+});
+
+// Phone notifications sent by the reminder sender (Sprint 4).
+self.addEventListener('push', (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = {};
+  }
+  const title = typeof data.title === 'string' ? data.title : 'Event Calender';
+  event.waitUntil(self.registration.showNotification(title, {
+    body: typeof data.body === 'string' ? data.body : '',
+    icon: 'icons/icon.svg',
+    badge: 'icons/icon.svg',
+    data: { url: typeof data.url === 'string' ? data.url : self.registration.scope },
+  }));
+});
+
+// Tapping the notification opens the event, reusing an open app window if there is one.
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const wanted = event.notification.data?.url ?? self.registration.scope;
+  // Only open addresses inside this app.
+  const url = new URL(wanted, self.registration.scope);
+  const target = url.href.startsWith(self.registration.scope) ? url.href : self.registration.scope;
+  event.waitUntil((async () => {
+    const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const client of windows) {
+      if (client.url.startsWith(self.registration.scope) && 'focus' in client) {
+        await client.navigate(target).catch(() => {});
+        return client.focus();
+      }
+    }
+    return self.clients.openWindow(target);
+  })());
 });

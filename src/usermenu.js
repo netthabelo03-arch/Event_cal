@@ -29,7 +29,7 @@ export function displayName(profile, session) {
  * @returns {{ href: string, text: string }[]}
  */
 export function menuLinks(profile, admin) {
-  const links = [{ href: '#/profile', text: 'Profile' }];
+  const links = [{ href: '#/profile', text: 'Profile' }, { href: '#/reminders', text: 'My reminders' }];
   if (profile?.role === 'host') links.push({ href: '#/my-events', text: 'My events' });
   if (admin === true) links.push({ href: '#/review', text: 'Review queue' });
   return links;

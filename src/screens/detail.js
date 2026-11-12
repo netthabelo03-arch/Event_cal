@@ -5,6 +5,8 @@
 import { getEvent, clipUrl, listHostEvents, recordView } from '../events/api.js';
 import { noteView, upcomingLabel } from '../events/discovery.js';
 import { eventCard } from '../events/cards.js';
+import { hasReminder, addReminder, removeReminder } from '../reminders/api.js';
+import { phonePanel } from '../reminders/panel.js';
 import { autoplayFull } from '../events/preview.js';
 import { MAX_CLIP_SECONDS } from '../rules/clip.js';
 import { CATEGORIES, formatWhen, isEventId, statusOf } from '../events/rules.js';
@@ -12,7 +14,7 @@ import { friendlyAuthError } from '../auth/errors.js';
 import { findSample, initials } from '../sample.js';
 import { loadViewer } from '../viewer.js';
 import { topBar } from '../usermenu.js';
-import { el, linkTo } from '../dom.js';
+import { el, linkTo, whileBusy } from '../dom.js';
 
 const KIND_LABEL = { event: 'Event', host: 'Host', artist: 'Artist' };
 const COMING = {
@@ -66,6 +68,54 @@ async function realHost(hostId) {
   ];
 }
 
+/** "Remind me" and, once set, the phone-notification offer. */
+async function reminderBox(userId, eventId) {
+  let reminded = false;
+  try {
+    reminded = await hasReminder(userId, eventId);
+  } catch {
+    reminded = false;
+  }
+  const box = el('div', { class: 'stack reminder-box' });
+  const button = el('button', { type: 'button', class: 'button' });
+  const message = el('p', { class: 'event-row__meta', role: 'status' });
+  let phone = null;
+
+  async function show() {
+    button.className = reminded ? 'button button--quiet' : 'button button--primary';
+    button.textContent = reminded ? 'Remove reminder' : 'Remind me';
+    message.textContent = reminded ? 'Reminder set. We will email you 1 day before the event.' : '';
+    if (reminded && !phone) {
+      phone = await phonePanel(userId);
+      box.append(phone);
+    } else if (!reminded && phone) {
+      phone.remove();
+      phone = null;
+    }
+  }
+
+  button.addEventListener('click', async () => {
+    let problem = null;
+    // whileBusy puts the button's old words back when it finishes,
+    // so the new words are set after it, not inside it.
+    await whileBusy(button, reminded ? 'Removing…' : 'Setting reminder…', async () => {
+      try {
+        if (reminded) await removeReminder(userId, eventId);
+        else await addReminder(userId, eventId);
+        reminded = !reminded;
+      } catch (error) {
+        problem = error;
+      }
+    });
+    await show();
+    if (problem) message.textContent = friendlyAuthError(problem);
+  });
+
+  box.append(button, message);
+  await show();
+  return box;
+}
+
 async function realEvent(id, viewerId) {
   let event;
   try {
@@ -102,7 +152,10 @@ async function realEvent(id, viewerId) {
     ]),
   );
   if (event.description) parts.push(el('p', { class: 'detail__text', text: event.description }));
-  parts.push(el('p', { class: 'notice', text: 'Reminders arrive in Sprint 4 and tickets in Sprint 5.' }));
+  if (event.status === 'live' && Date.parse(event.starts_at) > Date.now()) {
+    parts.push(await reminderBox(viewerId, event.id));
+  }
+  parts.push(el('p', { class: 'notice', text: 'Tickets arrive in Sprint 5.' }));
   // Count the view, except the host's own visits and visits not yet live.
   if (event.status === 'live' && event.host_id !== viewerId) countView(event.id);
   return parts;

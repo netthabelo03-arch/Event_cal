@@ -54,6 +54,8 @@ Plain HTML, CSS and JavaScript. There is no framework and nothing to install.
 | `src/auth/` | Accounts: form checks, error messages and the calls to Supabase |
 | `src/events/` | Events: the form's rules, statuses, dates, and the calls to Supabase |
 | `src/viewer.js` | Who is signed in: their profile and whether they are an admin |
+| `src/reminders/` | Reminders and phone notifications in the app |
+| `supabase/functions/send-reminders/` | The program on Supabase that sends reminder emails and phone notifications |
 | `src/config.js` | The Supabase project address and publishable key |
 | `supabase/` | Database setup scripts, run once in the Supabase dashboard |
 | `src/rules/` | Product rules: clip length and the host fee |
@@ -61,13 +63,14 @@ Plain HTML, CSS and JavaScript. There is no framework and nothing to install.
 | `tests/` | Automated tests |
 | `docs/defect-log.md` | The defect log |
 
-## What works so far (Sprints 0 to 3)
+## What works so far (Sprints 0 to 4)
 
 - Discover, open to everyone, with sample events, hosts and music.
 - Item details that need a log-in, returning to the clicked item afterwards.
 - Sign up with an email and a password, log in, forgot password, profile (name and role) and log out from the menu under the person's name.
 - Hosts post an event with a clip of at most 30 seconds; admins approve or reject it; approved events show on Discover with their own page.
 - A full-screen feed of 5-second previews, search with category and date filters, real host pages, and view counts for hosts.
+- Reminders: an email 1 day before and a phone notification 2 hours before each event a person taps Remind me on.
 - The app can be added to a phone's home screen.
 
 ## Accounts (Sprint 1)
@@ -114,6 +117,24 @@ One-time setup: in the Supabase SQL Editor, run [`supabase/003_views.sql`](supab
 The view count is a guide, not an audit: someone determined could inflate it, because counting happens from the browser.
 
 Manual test cases for this sprint are in [docs/sprint-3-test-cases.md](docs/sprint-3-test-cases.md).
+
+## Reminders (Sprint 4)
+
+A signed-in person taps **Remind me** on an event. They get an **email 1 day before** the event and, if they turned on phone notifications, a **phone notification 2 hours before**. **My reminders** (in the menu under their name) lists their reminders and lets them remove one or turn phone notifications on or off. On an iPhone, phone notifications work only after adding the app to the home screen.
+
+A small program on Supabase (the `send-reminders` Edge Function) checks every 5 minutes for reminders that are due and sends them. Emails go through Resend, using your own domain.
+
+### One-time setup
+
+1. **Database.** In the SQL Editor run [`supabase/004_reminders.sql`](supabase/004_reminders.sql).
+2. **Email service.** Create a free account at resend.com, add your domain and add the DNS records it shows at your domain provider until Resend says the domain is verified. Create an API key.
+3. **The sender.** In Supabase, open Edge Functions, create a function named `send-reminders`, and add the two files from [`supabase/functions/send-reminders/`](supabase/functions/send-reminders/) (`index.ts` and `schedule.js`). Turn **off** "Enforce JWT verification" for it (it checks the project's secret key instead), then deploy.
+4. **Secrets.** In Edge Functions, Secrets, add: `RESEND_API_KEY`, `EMAIL_FROM` (for example `Event Calender <reminders@yourdomain.co.za>`), `APP_URL` (`https://netthabelo03-arch.github.io/Event_cal/`), `VAPID_PUBLIC_KEY` (the value in `src/config.js`), `VAPID_PRIVATE_KEY` (given privately, never stored in this repository) and `VAPID_SUBJECT` (`mailto:` followed by your email).
+5. **Schedule.** In the SQL Editor, open [`supabase/005_schedule_reminders.sql`](supabase/005_schedule_reminders.sql), put in your project address and secret key where it says, and run it. Do not save the file with the real key in it.
+
+To check the sender, open Edge Functions, `send-reminders`, Logs. Each run reports how many emails and notifications it sent and any failures.
+
+Manual test cases for this sprint are in [docs/sprint-4-test-cases.md](docs/sprint-4-test-cases.md).
 
 ## Opening the app
 
