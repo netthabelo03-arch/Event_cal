@@ -7,10 +7,11 @@ export const SAMPLE_SECTIONS = [
     kind: 'event',
     title: 'Trending events',
     items: [
-      { id: 'jazz-night-at-the-yard', title: 'Jazz Night at the Yard', meta: 'Sat 21 Nov · Maboneng' },
-      { id: 'founders-meetup-12', title: 'Founders Meetup #12', meta: 'Thu 26 Nov · Braamfontein' },
-      { id: 'sunday-rooftop-market', title: 'Sunday Rooftop Market', meta: 'Sun 6 Dec · Rosebank' },
-      { id: 'new-years-eve-party', title: "New Year's Eve Party", meta: 'Thu 31 Dec · Maboneng' },
+      { id: 'jazz-night-at-the-yard', title: 'Jazz Night at the Yard', meta: 'Sat 21 Nov · Maboneng', category: 'music' },
+      { id: 'founders-meetup-12', title: 'Founders Meetup #12', meta: 'Thu 26 Nov · Braamfontein', category: 'business' },
+      { id: 'sunday-rooftop-market', title: 'Sunday Rooftop Market', meta: 'Sun 6 Dec · Rosebank', category: 'food' },
+      { id: 'saturday-fun-run', title: 'Saturday Fun Run', meta: 'Sat 12 Dec · Zoo Lake', category: 'sport' },
+      { id: 'new-years-eve-party', title: "New Year's Eve Party", meta: 'Thu 31 Dec · Maboneng', category: 'other' },
     ],
   },
   {

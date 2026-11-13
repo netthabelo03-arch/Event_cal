@@ -847,3 +847,37 @@ body.full .app { max-width: none; padding: 0; gap: 0; }
 
 /* The plusespot logo in the top bar. */
 .brand__mark { display: block; flex: none; width: 30px; height: 34px; }
+
+/* Spotlight as a ribbon: a wide, low band across the top of Discover. The
+   slides sit edge to edge round an upright drum, so the band curves away at
+   both ends. These rules replace the earlier carousel layout. */
+.hero__copy .hero__title { font-size: clamp(28px, 4vw, 52px); }
+.spotlight {
+  --ribbon-radius: 560px;
+  height: 330px;
+  perspective: 1300px;
+  perspective-origin: 50% 50%;
+  border-radius: 0;
+  margin: 0 -24px;
+}
+.spotlight__track { transform: translateZ(calc(-1 * var(--ribbon-radius))); }
+.spotlight__slide { top: 28px; width: 232px; height: 250px; margin-left: -116px; backface-visibility: hidden; }
+.spotlight__card { border-radius: 10px; border-color: var(--color-line); box-shadow: none; }
+.spotlight__slide--front .spotlight__card { box-shadow: 0 0 0 1px var(--color-accent), 0 24px 50px -20px rgb(34 197 94 / 0.5); }
+.spotlight__slide:not(.spotlight__slide--front) .spotlight__card { filter: brightness(0.7); }
+.spotlight__title { font-size: 17px; }
+.spotlight__text { padding: 40px 12px 12px; }
+.spotlight__art--sample { font-size: 56px; }
+.spotlight__arrow { margin-top: -30px; }
+@media (min-width: 960px) {
+  .spotlight { --ribbon-radius: 660px; height: 380px; }
+  .spotlight__slide { width: 274px; height: 300px; margin-left: -137px; }
+}
+@media (max-width: 480px) {
+  .spotlight { --ribbon-radius: 400px; height: 280px; margin: 0 -16px; perspective: 900px; }
+  .spotlight__slide { width: 166px; height: 205px; margin-left: -83px; top: 20px; }
+}
+
+/* Categories under the ribbon. */
+.categories { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.categories [hidden] { display: none; }

@@ -1,5 +1,5 @@
-// Spotlight: the 3D carousel at the top of Discover. Event clips stand in a
-// curved row; the front one plays, the others turn away into the distance.
+// Spotlight: the 3D ribbon across the top of Discover. Event clips sit edge to
+// edge on a ribbon that curves away at both ends; the front one plays.
 // It moves on by itself, and people can swipe, tap the arrows or use the
 // arrow keys. The maths is kept apart from the browser code so it can be tested.
 
@@ -10,7 +10,10 @@ import { mayAutoplay } from './preview.js';
 export const SPOTLIGHT_SECONDS = 4;
 
 /** How many slides show on each side of the front one. */
-const SIDE = 2;
+const SIDE = 3;
+
+/** Degrees between neighbouring slides around the ribbon. */
+export const RIBBON_STEP = 24;
 
 /**
  * Where a slide sits relative to the front one, the short way round:
@@ -24,27 +27,24 @@ export function offsetFrom(index, active, count) {
 }
 
 /**
- * The 3D position of a slide `offset` places from the front.
- * @returns {{ x: number, z: number, rotate: number, scale: number, opacity: number, hidden: boolean }}
- *   x as a share of the slide's width, z in px, rotate in degrees around the vertical axis.
+ * The slides form a ribbon wrapped round an upright drum: each one is turned
+ * `angle` degrees round it from the front, so the ribbon curves away at both ends.
+ * @returns {{ angle: number, opacity: number, hidden: boolean }}
  */
 export function poseFor(offset) {
   const distance = Math.abs(offset);
   const side = Math.sign(offset);
-  if (distance > SIDE) return { x: side * 1.9, z: -520, rotate: -side * 60, scale: 0.7, opacity: 0, hidden: true };
+  if (distance > SIDE) return { angle: side * (SIDE + 1) * RIBBON_STEP, opacity: 0, hidden: true };
   return {
-    x: side * (distance === 0 ? 0 : 0.95 + (distance - 1) * 0.6),
-    z: distance === 0 ? 0 : -distance * 220,
-    rotate: distance === 0 ? 0 : -side * Math.min(distance * 42, 60),
-    scale: 1 - distance * 0.06,
-    opacity: distance === 0 ? 1 : distance === 1 ? 0.8 : 0.45,
+    angle: distance === 0 ? 0 : offset * RIBBON_STEP,
+    opacity: [1, 0.9, 0.6, 0.3][distance],
     hidden: false,
   };
 }
 
-/** The CSS transform for poseFor(). */
+/** The CSS transform for poseFor(). The drum's radius comes from the stylesheet. */
 export function transformFor(pose) {
-  return `translateX(${(pose.x * 100).toFixed(1)}%) translateZ(${pose.z}px) rotateY(${pose.rotate}deg) scale(${pose.scale})`;
+  return `rotateY(${pose.angle}deg) translateZ(var(--ribbon-radius))`;
 }
 
 function deviceAllowsMotion() {

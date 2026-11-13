@@ -8,7 +8,7 @@ import { hostsFrom } from '../events/discovery.js';
 import { eventCard, hostCard } from '../events/cards.js';
 import { spotlight } from '../events/spotlight.js';
 import { clipUrl } from '../events/api.js';
-import { formatWhen } from '../events/rules.js';
+import { CATEGORIES, formatWhen } from '../events/rules.js';
 import { SAMPLE_SECTIONS, initials } from '../sample.js';
 import { hashFor } from '../router.js';
 import { loadViewer } from '../viewer.js';
@@ -28,7 +28,7 @@ function section(title, cards) {
 }
 
 /** At least this many slides make the 3D carousel feel full. */
-const SPOTLIGHT_MIN = 5;
+const SPOTLIGHT_MIN = 7;
 
 /** One slide: the event's clip (or a sample's artwork), title and when/where. */
 async function spotlightSlide(item, sample) {
@@ -62,23 +62,60 @@ async function spotlightSlide(item, sample) {
 /** Real events first, then sample events until the carousel is full. */
 async function spotlightSection(liveEvents) {
   const samples = SAMPLE_SECTIONS.find((sample) => sample.kind === 'event')?.items ?? [];
-  const chosen = liveEvents.slice(0, 8).map((event) => [event, false]);
-  for (const item of samples) {
-    if (chosen.length >= SPOTLIGHT_MIN) break;
-    chosen.push([item, true]);
+  const chosen = liveEvents.slice(0, 10).map((event) => [event, false]);
+  // Samples repeat if needed, so the ribbon always reaches both edges.
+  for (let i = 0; samples.length > 0 && chosen.length < SPOTLIGHT_MIN; i += 1) {
+    chosen.push([samples[i % samples.length], true]);
   }
   if (chosen.length === 0) return null;
   return spotlight(await Promise.all(chosen.map(([item, sample]) => spotlightSlide(item, sample))));
 }
 
-/** The row of real events. Each clip plays its first seconds in turn. */
-async function liveSection(events) {
-  const cards = await Promise.all(events.map(eventCard));
-  const node = section('Upcoming events', cards.map((card) => card.node));
-  const row = node.children[1];
-  // Start once the row is on the page; startPreviews waits until it is visible.
-  setTimeout(() => startPreviews(row, cards.map((card) => card.video)), 0);
-  return node;
+/**
+ * Events grouped by category, under the ribbon. The pills at the top show one
+ * category or all of them. A category with no real event yet shows a sample.
+ */
+async function categorySections(liveEvents) {
+  const samples = SAMPLE_SECTIONS.find((sample) => sample.kind === 'event')?.items ?? [];
+  const videos = [];
+  const sections = [];
+  for (const category of CATEGORIES) {
+    const events = liveEvents.filter((event) => event.category === category.id);
+    let cards;
+    if (events.length > 0) {
+      const built = await Promise.all(events.map(eventCard));
+      built.forEach((card) => videos.push(card.video));
+      cards = built.map((card) => card.node);
+    } else {
+      cards = samples
+        .filter((item) => item.category === category.id)
+        .map((item) => sampleCard('event', { ...item, meta: `Sample · ${item.meta}` }));
+    }
+    if (cards.length === 0) continue;
+    const node = section(category.name, cards);
+    node.dataset.category = category.id;
+    node.id = `category-${category.id}`;
+    sections.push(node);
+  }
+
+  const choices = [{ id: 'all', name: 'All' }, ...CATEGORIES.filter((category) => sections.some((node) => node.dataset.category === category.id))];
+  const pills = choices.map((choice) => {
+    const pill = el('button', { type: 'button', class: 'pill', 'aria-pressed': String(choice.id === 'all'), text: choice.name });
+    pill.addEventListener('click', () => {
+      pills.forEach((other) => other.setAttribute('aria-pressed', String(other === pill)));
+      sections.forEach((node) => { node.hidden = choice.id !== 'all' && node.dataset.category !== choice.id; });
+    });
+    return pill;
+  });
+
+  const wrapper = el('div', { class: 'categories' }, [
+    el('h2', { class: 'section__title', text: 'Browse by category' }),
+    el('div', { class: 'pills', role: 'group', 'aria-label': 'Category' }, pills),
+    ...sections,
+  ]);
+  // Start once the rows are on the page; startPreviews waits until they are visible.
+  setTimeout(() => startPreviews(wrapper, videos.filter(Boolean)), 0);
+  return wrapper;
 }
 
 export async function renderDiscover({ session }) {
@@ -97,30 +134,27 @@ export async function renderDiscover({ session }) {
   const stage = await spotlightSection(liveEvents);
   const content = [
     topBar({ profile, session, admin }),
-    el('div', { class: 'hero' }, [
-      el('div', { class: 'hero__copy' }, [
-        el('h1', { class: 'title hero__title', text: "Never miss what's on." }),
-        el('p', { class: 'lead', text: 'Short event clips. Reminders. Tickets.' }),
-        el('div', { class: 'actions' }, actions),
-      ]),
-      ...(stage ? [stage] : []),
+    ...(stage ? [stage] : []),
+    el('div', { class: 'hero__copy' }, [
+      el('h1', { class: 'title hero__title', text: "Never miss what's on." }),
+      el('p', { class: 'lead', text: 'Short event clips. Reminders. Tickets.' }),
+      el('div', { class: 'actions' }, actions),
     ]),
+    el('p', { class: 'notice', text: 'Items marked Sample are placeholders until more real events are posted.' }),
+    await categorySections(liveEvents),
   ];
 
   const music = SAMPLE_SECTIONS.find((sample) => sample.kind === 'artist');
   const musicSection = section(music.title, music.items.map((item) => sampleCard('artist', item)));
 
   if (liveEvents.length > 0) {
-    content.push(await liveSection(liveEvents));
     content.push(section('Popular hosts', hostsFrom(liveEvents).slice(0, 12).map(hostCard)));
-    content.push(el('p', { class: 'notice', text: 'The music below is a sample until artists can post (Sprint 8).' }));
-    content.push(musicSection);
   } else {
-    content.push(el('p', { class: 'notice', text: 'Sample items are shown while the first real events are being added.' }));
-    for (const sample of SAMPLE_SECTIONS) {
-      content.push(section(sample.title, sample.items.map((item) => sampleCard(sample.kind, item))));
-    }
+    const hosts = SAMPLE_SECTIONS.find((sample) => sample.kind === 'host');
+    content.push(section(hosts.title, hosts.items.map((item) => sampleCard('host', item))));
   }
+  content.push(el('p', { class: 'notice', text: 'The music below is a sample until artists can post (Sprint 8).' }));
+  content.push(musicSection);
 
   if (profile?.role === 'host') {
     content.push(el('p', { class: 'link-row' }, ['You are signed in as a Host. ', linkTo('#/new-event', 'Promote an event')]));
