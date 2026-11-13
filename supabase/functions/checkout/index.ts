@@ -5,6 +5,10 @@
 //     unless it is free, asks Paystack for a payment page to send them to.
 //   { action: 'demo_pay', order_id }
 //     Demo mode only: marks the person's own order paid and issues the tickets.
+//   { action: 'boost_start', event_id, days }   (hosts: boost a clip for 1, 3 or 7 days)
+//   { action: 'boost_demo_pay', boost_id }      (demo mode only)
+//   { action: 'boost_verify', boost_id }
+//     The same three steps for a paid boost of the host's own event.
 //   { action: 'verify', order_id }
 //     After paying, asks Paystack whether the payment went through and, if so,
 //     issues the tickets. Safe to call more than once.
@@ -93,6 +97,59 @@ export default {
         // Paystack does not know the payment yet (for example, the person closed the page).
         return Response.json({ status: 'pending' });
       }
+    }
+
+    if (body.action === 'boost_start') {
+      // Runs as the signed-in host; the database checks the event is theirs and sets the price.
+      const { data, error } = await ctx.supabase.rpc('start_boost', { p_event_id: body.event_id, p_days: body.days });
+      if (error) return fail(error.message);
+      const boost = Array.isArray(data) ? data[0] : data;
+      if (mode === 'demo') return Response.json({ boost_id: boost.boost_id, amount_cents: boost.amount_cents, status: 'pending', demo: true });
+      const email = ctx.userClaims?.email;
+      if (!email) return fail('no_email');
+      try {
+        const payment = await paystack('/transaction/initialize', {
+          method: 'POST',
+          body: JSON.stringify({
+            email,
+            amount: boost.amount_cents,
+            currency: 'ZAR',
+            reference: boost.boost_id,
+            callback_url: returnUrl(env('APP_URL'), boost.boost_id, 'boost'),
+            metadata: { boost_id: boost.boost_id },
+          }),
+        });
+        return Response.json({ boost_id: boost.boost_id, amount_cents: boost.amount_cents, status: 'pending', authorization_url: payment.authorization_url });
+      } catch (problem) {
+        return fail(`payment_start_failed: ${problem.message}`, 502);
+      }
+    }
+
+    if (body.action === 'boost_verify' || body.action === 'boost_demo_pay') {
+      if (!isOrderId(body.boost_id)) return fail('bad_request');
+      // Read through the host's own access, so nobody can pay or check someone else's boost.
+      const { data: boost } = await ctx.supabase.from('boosts').select('id, status, amount_cents, ends_at').eq('id', body.boost_id).maybeSingle();
+      if (!boost) return fail('unknown_boost', 404);
+      if (boost.status !== 'pending') return Response.json({ status: boost.status, ends_at: boost.ends_at });
+      let amount;
+      if (mode === 'demo') {
+        if (body.action === 'boost_verify') return Response.json({ status: 'pending', demo: true });
+        amount = boost.amount_cents;
+      } else {
+        if (body.action === 'boost_demo_pay') return fail('bad_request');
+        try {
+          const paid = paidOrderFrom(await paystack(`/transaction/verify/${encodeURIComponent(boost.id)}`));
+          if (!paid || paid.orderId !== boost.id) return Response.json({ status: 'pending' });
+          amount = paid.amountCents;
+        } catch {
+          return Response.json({ status: 'pending' });
+        }
+      }
+      const { data: result, error } = await ctx.supabaseAdmin.rpc('fulfill_boost', { p_boost_id: boost.id, p_amount_cents: amount });
+      if (error) return fail(error.message, 500);
+      const done = result === 'paid' || result === 'already_paid';
+      const { data: after } = await ctx.supabase.from('boosts').select('ends_at').eq('id', boost.id).maybeSingle();
+      return Response.json({ status: done ? 'paid' : 'pending', detail: result, ends_at: after?.ends_at ?? null, ...(mode === 'demo' ? { demo: true } : {}) });
     }
 
     return fail('bad_request');

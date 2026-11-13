@@ -21,7 +21,7 @@ export async function addTicketTypes(eventId, types) {
 }
 
 /** Call the checkout function and turn its error answer into { code }. */
-async function checkout(body) {
+export async function checkout(body) {
   const client = await getClient();
   const { data, error } = await client.functions.invoke('checkout', { body });
   if (error) {

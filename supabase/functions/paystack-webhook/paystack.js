@@ -49,8 +49,8 @@ export function paidOrderFrom(data) {
   return { orderId: data.reference, amountCents: data.amount };
 }
 
-/** Where Paystack sends the buyer back after paying. */
-export function returnUrl(appUrl, orderId) {
+/** Where Paystack sends the payer back after paying for an order or a boost. */
+export function returnUrl(appUrl, id, kind = 'order') {
   const base = String(appUrl ?? '').replace(/[?#].*$/, '').replace(/\/?$/, '/');
-  return `${base}?order=${orderId}`;
+  return `${base}?${kind === 'boost' ? 'boost' : 'order'}=${id}`;
 }

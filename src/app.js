@@ -97,13 +97,24 @@ async function show() {
 }
 
 /**
- * Paystack sends the buyer back to the app's address with "?order=<id>".
- * Turn that into the order screen and tidy the address bar.
+ * Paystack sends the payer back to the app's address with "?order=<id>" or
+ * "?boost=<id>". Turn that into the right screen and tidy the address bar.
  */
 function arriveFromPayment() {
-  const order = new URLSearchParams(window.location.search).get('order');
-  if (!order || !/^[0-9a-f-]{36}$/.test(order)) return;
-  window.history.replaceState(null, '', `${window.location.pathname}#/order/${order}`);
+  const params = new URLSearchParams(window.location.search);
+  const order = params.get('order');
+  const boost = params.get('boost');
+  if (order && /^[0-9a-f-]{36}$/.test(order)) {
+    window.history.replaceState(null, '', `${window.location.pathname}#/order/${order}`);
+  } else if (boost && /^[0-9a-f-]{36}$/.test(boost)) {
+    // My events confirms the boost's payment when it opens.
+    try {
+      window.sessionStorage.setItem('boost-to-confirm', boost);
+    } catch {
+      // Without storage the webhook still switches the boost on.
+    }
+    window.history.replaceState(null, '', `${window.location.pathname}#/my-events`);
+  }
 }
 
 async function start() {

@@ -1,6 +1,7 @@
 // Everything the screens need for events, in one place.
 // Each function throws on failure; screens show friendlyAuthError(error).
 
+import { withPromoted } from '../boosts/rules.js';
 import { getClient } from '../auth/client.js';
 import { clipPath, startsAtIso } from './rules.js';
 import { cleanSearch } from './discovery.js';
@@ -58,7 +59,7 @@ export async function createEvent(userId, hostName, form) {
 /** The signed-in host's own events, newest first. */
 export async function listMyEvents(userId) {
   const client = await getClient();
-  const { data, error } = await client.from('events').select(`${COLUMNS}, ticket_types(quantity, sold)`).eq('host_id', userId).order('created_at', { ascending: false });
+  const { data, error } = await client.from('events').select(`${COLUMNS}, ticket_types(quantity, sold), boosts(status, ends_at)`).eq('host_id', userId).order('created_at', { ascending: false });
   if (error) throw error;
   return data;
 }
@@ -74,7 +75,8 @@ export async function listLiveEvents(limit = 50) {
     .order('starts_at', { ascending: true })
     .limit(limit);
   if (error) throw error;
-  return data;
+  // Boosted events come first and carry promoted: true.
+  return withPromoted(data, await promotedNow(client));
 }
 
 /** One event, or null if it does not exist or may not be seen. */
@@ -128,7 +130,7 @@ export async function searchEvents({ text = '', category = null, from, to }) {
   }
   const { data, error } = await query.order('starts_at', { ascending: true }).limit(50);
   if (error) throw error;
-  return data;
+  return withPromoted(data, await promotedNow(client));
 }
 
 /** A host's upcoming live events, soonest first. */
@@ -150,4 +152,15 @@ export async function recordView(eventId) {
   const client = await getClient();
   const { error } = await client.rpc('record_view', { p_event_id: eventId });
   if (error) throw error;
+}
+
+/** Ids of the events boosted right now; empty if they cannot be read. */
+async function promotedNow(client) {
+  try {
+    const { data, error } = await client.rpc('promoted_event_ids');
+    if (error || !Array.isArray(data)) return [];
+    return data.map((row) => (typeof row === 'string' ? row : row?.promoted_event_ids)).filter(Boolean);
+  } catch {
+    return [];
+  }
 }

@@ -896,3 +896,18 @@ body.full .app { max-width: none; padding: 0; gap: 0; }
 .guest { padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--color-surface); border-radius: var(--radius-control); }
 .guest .chip { align-self: center; }
 .guest--in { opacity: 0.65; }
+
+/* Boosts (Sprint 7): the "Promoted" label and the host's boost panel. */
+.card__tag, .feed__promoted {
+  align-self: flex-start;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-on-accent);
+  background: var(--color-accent);
+}
+.boost { gap: 8px; margin-top: 4px; }
+.boost .chip[hidden] { display: none; }

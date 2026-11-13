@@ -51,7 +51,7 @@ async function spotlightSlide(item, sample) {
   const node = el('a', { class: 'spotlight__card', href }, [
     art,
     el('span', { class: 'spotlight__text' }, [
-      el('span', { class: 'spotlight__tag', text: sample ? 'Sample' : 'Live' }),
+      el('span', { class: 'spotlight__tag', text: sample ? 'Sample' : item.promoted ? 'Promoted' : 'Live' }),
       el('span', { class: 'spotlight__title', text: item.title }),
       el('span', { class: 'spotlight__meta', text: meta }),
     ]),

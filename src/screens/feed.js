@@ -23,6 +23,7 @@ async function slide(event) {
     backdrop,
     video,
     el('span', { class: 'feed__info' }, [
+      ...(event.promoted ? [el('span', { class: 'feed__promoted', text: 'Promoted' })] : []),
       el('span', { class: 'feed__host', text: event.host_name || 'A host' }),
       el('span', { class: 'feed__title', text: event.title }),
       el('span', { class: 'feed__meta', text: `${formatWhen(event.starts_at)} · ${event.venue}` }),

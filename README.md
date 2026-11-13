@@ -170,6 +170,13 @@ Manual test cases for this sprint are in [docs/sprint-5-test-cases.md](docs/spri
 
 Each ticket gets in once: a second scan shows "Already used" with the time of the first. Only the event's host can check its tickets in, and the check happens in the database. The camera needs the site to be opened over https (GitHub Pages is) and permission to use the camera.
 
+## Boosts (Sprint 7)
+
+1. **Database.** In Supabase, SQL Editor, paste `supabase/008_boosts.sql` and Run.
+2. **Functions.** Deploy `checkout` and `paystack-webhook` again with the files in `supabase/functions/` (both `index.ts` files and both copies of `paystack.js` changed).
+
+A host opens My events, taps **Boost this clip** under a live event and chooses 1 day (R50), 3 days (R120) or 7 days (R250). Once paid, the event shows first on Discover, in the feed and in search, marked **Promoted**, until the boost ends; a second boost adds time. Prices are set in `boost_price_cents` in the database script (and shown from `src/boosts/rules.js`; keep the two the same). Boosts use the same payment mode as tickets: demo while `PAYMENTS_MODE = demo`, Paystack once `PAYSTACK_SECRET_KEY` is set.
+
 ## Opening the app
 
 The app must be opened through a web address, not by double-clicking `index.html`; browsers block this kind of JavaScript when a file is opened directly.

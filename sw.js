@@ -2,7 +2,7 @@
 // It always tries the network first, so people get the newest version,
 // and only falls back to the saved copy when there is no connection.
 
-const CACHE = 'event-cal-shell-v7';
+const CACHE = 'event-cal-shell-v8';
 
 self.addEventListener('install', () => {
   self.skipWaiting();

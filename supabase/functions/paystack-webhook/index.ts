@@ -24,10 +24,11 @@ export default {
     } catch {
       return new Response('bad body', { status: 400 });
     }
+    // The reference is a ticket order or a boost; the database works out which.
     if (event.event === 'charge.success') {
       const paid = paidOrderFrom(event.data);
       if (paid) {
-        const { error } = await ctx.supabaseAdmin.rpc('fulfill_order', { p_order_id: paid.orderId, p_amount_cents: paid.amountCents });
+        const { error } = await ctx.supabaseAdmin.rpc('fulfill_payment', { p_reference: paid.orderId, p_amount_cents: paid.amountCents });
         // Answer with an error so Paystack tries again later.
         if (error) return new Response('could not record payment', { status: 500 });
       }

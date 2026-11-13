@@ -4,6 +4,9 @@
 import { listMyEvents } from '../events/api.js';
 import { addTicketTypes } from '../tickets/api.js';
 import { ticketEditor } from '../tickets/editor.js';
+import { formatRand } from '../tickets/rules.js';
+import { startBoost, payDemoBoost, verifyBoost } from '../boosts/api.js';
+import { BOOST_OPTIONS, boostedUntil, boostedLabel, boostErrorMessage } from '../boosts/rules.js';
 import { statusOf, formatWhen } from '../events/rules.js';
 import { viewsLabel } from '../events/discovery.js';
 import { friendlyAuthError } from '../auth/errors.js';
@@ -54,6 +57,93 @@ function addTicketsPanel(event) {
   return panel;
 }
 
+/**
+ * "Boost this clip" for a live, upcoming event: choose 1, 3 or 7 days, pay,
+ * and the clip moves to the front as "Promoted". A second boost adds time.
+ */
+function boostPanel(event) {
+  const status = el('span', { class: 'chip chip--good' });
+  const showUntil = (until) => {
+    status.hidden = !until;
+    if (until) status.textContent = boostedLabel(until);
+  };
+  showUntil(boostedUntil(event.boosts));
+  const open = el('button', { type: 'button', class: 'button button--quiet button--small', text: boostedUntil(event.boosts) ? 'Add more boost days' : 'Boost this clip' });
+  const body = el('div', { class: 'stack' }, [open]);
+  const panel = el('div', { class: 'stack boost' }, [status, body]);
+  const reset = () => body.replaceChildren(open);
+
+  const problem = el('p', { class: 'field__error', role: 'alert' });
+  const fail = (text) => {
+    problem.textContent = text;
+    problem.hidden = false;
+  };
+  const done = (until) => {
+    showUntil(until);
+    open.textContent = 'Add more boost days';
+    body.replaceChildren(el('p', { class: 'event-row__meta', role: 'status', text: 'Your clip now shows first, marked Promoted.' }), open);
+  };
+
+  open.addEventListener('click', () => {
+    problem.hidden = true;
+    const cancel = el('button', { type: 'button', class: 'text-link', text: 'Cancel' });
+    cancel.addEventListener('click', reset);
+    const choices = BOOST_OPTIONS.map((option) => {
+      const button = el('button', { type: 'button', class: 'button button--quiet button--small', text: `${option.label} · ${formatRand(option.cents)}` });
+      button.addEventListener('click', async () => {
+        problem.hidden = true;
+        let started = null;
+        await whileBusy(button, 'Starting…', async () => {
+          try {
+            started = await startBoost(event.id, option.days);
+          } catch (error) {
+            fail(boostErrorMessage(error?.code));
+          }
+        });
+        if (!started) return;
+        if (started.authorization_url) {
+          window.location.assign(started.authorization_url);
+          return;
+        }
+        if (started.demo !== true) {
+          fail(boostErrorMessage(''));
+          return;
+        }
+        // Demo payments: no real money. The host taps Pay and the boost starts.
+        const pay = el('button', { type: 'button', class: 'button button--primary', text: `Pay ${formatRand(started.amount_cents)} (demo)` });
+        pay.addEventListener('click', async () => {
+          problem.hidden = true;
+          let paid = null;
+          await whileBusy(pay, 'Paying…', async () => {
+            try {
+              paid = await payDemoBoost(started.boost_id);
+            } catch {
+              paid = null;
+            }
+          });
+          if (paid?.status === 'paid') done(paid.ends_at);
+          else fail('The demo payment did not go through. Please try again.');
+        });
+        body.replaceChildren(
+          el('p', { class: 'event-row__meta', text: `Demo payment for a ${option.label} boost: no real money is charged and no card is needed.` }),
+          problem,
+          el('div', { class: 'link-row' }, [pay, cancel]),
+        );
+      });
+      return button;
+    });
+    body.replaceChildren(
+      el('p', { class: 'event-row__meta', text: 'A boost shows your clip first on Discover, in the feed and in search, marked Promoted.' }),
+      el('div', { class: 'pills' }, choices),
+      problem,
+      cancel,
+    );
+  });
+
+  problem.hidden = true;
+  return panel;
+}
+
 function eventRow(event) {
   const status = statusOf(event.status);
   const lines = [
@@ -81,6 +171,7 @@ function eventRow(event) {
     const view = linkTo(`#/event/${event.id}`, 'View event');
     view.className = 'text-link event-row__link';
     lines.push(view);
+    if (Date.parse(event.starts_at) > Date.now()) lines.push(boostPanel(event));
     if (hasTickets) {
       const scan = el('a', { href: `#/scan/${event.id}`, class: 'button button--quiet button--small event-row__scan', text: 'Scan tickets at the door' });
       lines.push(scan);
@@ -104,6 +195,17 @@ export async function renderMyEvents({ session }) {
   }
 
   const promote = el('a', { href: '#/new-event', class: 'button button--primary', text: 'Promote an event' });
+
+  // Back from the payment page for a boost: confirm it before listing the events.
+  try {
+    const waiting = window.sessionStorage.getItem('boost-to-confirm');
+    if (waiting) {
+      window.sessionStorage.removeItem('boost-to-confirm');
+      await verifyBoost(waiting).catch(() => {});
+    }
+  } catch {
+    // Without storage the webhook still switches the boost on.
+  }
 
   let events;
   try {

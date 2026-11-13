@@ -17,6 +17,7 @@ export async function eventCard(event) {
   video.src = await clipUrl(event.clip_path);
   const node = el('a', { class: 'card card--event', href: hashFor({ screen: 'detail', kind: 'event', id: event.id }) }, [
     video,
+    ...(event.promoted ? [el('span', { class: 'card__tag', text: 'Promoted' })] : []),
     el('span', { class: 'card__title', text: event.title }),
     el('span', { class: 'card__meta', text: `${formatWhen(event.starts_at)} · ${event.venue}` }),
   ]);
