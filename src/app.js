@@ -20,6 +20,7 @@ import { renderSearch } from './screens/search.js';
 import { renderReminders } from './screens/reminders.js';
 import { renderTickets } from './screens/tickets.js';
 import { renderOrder } from './screens/order.js';
+import { renderScan } from './screens/scan.js';
 import { forgetViewer } from './viewer.js';
 
 const SCREENS = {
@@ -38,6 +39,7 @@ const SCREENS = {
   reminders: renderReminders,
   tickets: renderTickets,
   order: renderOrder,
+  scan: renderScan,
 };
 
 const root = document.getElementById('app');

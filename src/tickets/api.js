@@ -76,3 +76,30 @@ export async function listMyTickets(userId) {
   if (error) throw error;
   return data.sort((a, b) => Date.parse(a.events.starts_at) - Date.parse(b.events.starts_at));
 }
+
+/** One of the signed-in host's own events, for the door screen. Null if it is not theirs. */
+export async function getHostedEvent(eventId, userId) {
+  const client = await getClient();
+  const { data, error } = await client.from('events').select('id, title, starts_at, venue, status').eq('id', eventId).eq('host_id', userId).maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+/** Every ticket issued for an event (the guest list). Only its host may read it. */
+export async function listEventTickets(eventId) {
+  const client = await getClient();
+  const { data, error } = await client.from('tickets').select('id, code, checked_in_at, ticket_types(name)').eq('event_id', eventId).order('code', { ascending: true });
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Check a ticket in at the door. Each ticket gets in once.
+ * @returns {Promise<{ result: string, ticket_type: string | null, checked_in_at: string | null }>}
+ */
+export async function checkInTicket(eventId, code) {
+  const client = await getClient();
+  const { data, error } = await client.rpc('check_in_ticket', { p_event_id: eventId, p_code: code });
+  if (error) throw error;
+  return Array.isArray(data) ? data[0] : data;
+}

@@ -81,6 +81,10 @@ function eventRow(event) {
     const view = linkTo(`#/event/${event.id}`, 'View event');
     view.className = 'text-link event-row__link';
     lines.push(view);
+    if (hasTickets) {
+      const scan = el('a', { href: `#/scan/${event.id}`, class: 'button button--quiet button--small event-row__scan', text: 'Scan tickets at the door' });
+      lines.push(scan);
+    }
   }
   return el('li', { class: 'event-row' }, lines);
 }

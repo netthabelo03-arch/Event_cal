@@ -881,3 +881,18 @@ body.full .app { max-width: none; padding: 0; gap: 0; }
 /* Categories under the ribbon. */
 .categories { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
 .categories [hidden] { display: none; }
+
+/* Door screen (Sprint 6). */
+.event-row__scan { align-self: flex-start; margin-top: 4px; }
+.scan__count { font-family: var(--font-heading); font-weight: 700; font-size: 20px; }
+.scan__result { padding: 20px; display: flex; flex-direction: column; gap: 4px; border-radius: var(--radius-card); border: 2px solid transparent; }
+.scan__result-title { font-family: var(--font-heading); font-size: 28px; line-height: 1.1; }
+.scan__result--waiting { background: var(--color-surface); border-color: var(--color-line-strong); }
+.scan__result--good { background: var(--color-success-bg); border-color: var(--color-accent); color: var(--color-accent-hover); }
+.scan__result--bad { background: var(--color-danger-bg); border-color: var(--color-danger); color: var(--color-danger); }
+.scan__video { width: 100%; max-width: 420px; aspect-ratio: 1; object-fit: cover; background: #000; border-radius: var(--radius-card); border: 2px solid var(--color-accent); }
+.scan__video[hidden] { display: none; }
+.guest-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.guest { padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--color-surface); border-radius: var(--radius-control); }
+.guest .chip { align-self: center; }
+.guest--in { opacity: 0.65; }

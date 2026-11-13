@@ -28,7 +28,7 @@ The app is built in sprints. Each sprint has its own branch, its own folder of c
 | 3 | Discover feed with 5-second previews, event page, search | A goer can scroll clips and open an event |
 | 4 | Reminders and notifications | A goer gets reminded before an event |
 | 5 | Tickets: ticket types, checkout, QR ticket | A goer can pay (test mode) and receive a ticket |
-| 6 | Door scanning, guest list, refunds, host payouts | A ticket is scanned once and the payout is correct |
+| 6 | Door scanning and guest list (refunds and host payouts follow once real payments are on) | A ticket is scanned once |
 | 7 | Paid boosts and the Promoted label | A host can pay to boost a clip |
 | 8 | Artists and the music feed | An artist's clip appears under Music |
 | 9 | Legal pages, reporting, error states, launch checks | Ready for real users |
@@ -161,6 +161,14 @@ Prices and stock are checked in the database, never trusted from the browser. Ti
 Before taking real money: switch Paystack to live mode (it needs a registered business), replace the secret with the live key (`sk_live_...`) and set the live Webhook URL.
 
 Manual test cases for this sprint are in [docs/sprint-5-test-cases.md](docs/sprint-5-test-cases.md).
+
+
+## Door scanning (Sprint 6)
+
+1. **Database.** In Supabase, SQL Editor, paste `supabase/007_checkin.sql` and Run.
+2. **At the door.** The host opens My events and taps **Scan tickets at the door** under the event. **Start camera** reads each ticket's QR code; the 12-character code under the QR code can be typed instead.
+
+Each ticket gets in once: a second scan shows "Already used" with the time of the first. Only the event's host can check its tickets in, and the check happens in the database. The camera needs the site to be opened over https (GitHub Pages is) and permission to use the camera.
 
 ## Opening the app
 
