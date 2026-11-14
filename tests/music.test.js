@@ -84,3 +84,12 @@ test('sending a track back is locked down in the database script', () => {
   assert.match(resubmit, /status = 'in_review'/);
   assert.match(resubmit, /from public, anon;/);
 });
+
+test('names on tracks and events follow the profile (D-007)', () => {
+  const names = readFileSync(new URL('../supabase/011_names.sql', import.meta.url), 'utf8');
+  assert.match(names, /before insert on public\.tracks/);
+  assert.match(names, /before insert on public\.events/);
+  assert.match(names, /after update of full_name on public\.profiles/);
+  assert.match(names, /update public\.tracks t set artist_name/);
+  assert.equal((names.match(/security definer\s+set search_path = ''/g) ?? []).length, 3);
+});

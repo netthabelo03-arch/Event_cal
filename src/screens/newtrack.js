@@ -157,6 +157,11 @@ export async function renderNewTrack({ session, id }) {
       message.show('Fix the highlighted fields and try again.');
       return;
     }
+    // People need to see who made the track (D-007).
+    if (!String(profile.full_name ?? '').trim()) {
+      message.show('Add your artist name in your profile first, so people can see who made this track.');
+      return;
+    }
     await whileBusy(submit, clipFile ? 'Uploading your clip…' : 'Sending…', async () => {
       try {
         if (editing) await resubmitTrack(session.user.id, editing.id, values);

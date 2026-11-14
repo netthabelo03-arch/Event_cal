@@ -179,7 +179,7 @@ A host opens My events, taps **Boost this clip** under a live event and chooses 
 
 ## Music (Sprint 8)
 
-1. **Database.** In Supabase, SQL Editor, paste `supabase/009_tracks.sql` and Run, then `supabase/010_track_resubmit.sql`.
+1. **Database.** In Supabase, SQL Editor, paste `supabase/009_tracks.sql` and Run, then `supabase/010_track_resubmit.sql` and `supabase/011_names.sql`.
 
 A person switches to **Artist** in their profile and opens **My music** from the menu. **Post your music** takes a video clip of at most 30 seconds, a track name and a genre. An admin approves it in the **Review queue** (under "Music"), and it then shows under **New music** on Discover, with the artist under **Artists**. Each track has its own page that plays the full clip and counts plays; each artist has a page listing their live tracks. Clips are kept in the same storage as event clips. A track that is not approved shows the admin's reason in My music with **Edit and send back**: the artist changes the name, genre, description or clip and it returns to the review queue, where the admin sees the earlier reason.
 

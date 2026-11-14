@@ -27,3 +27,6 @@ Before testing, run `supabase/009_tracks.sql` (README, "Music (Sprint 8)"). You 
 | S8-21 | New clip too long | While editing, choose a clip longer than 30 seconds. | A message says the clip is too long; it cannot be sent. |
 | S8-22 | Only rejected tracks | Open the edit address of a track that is live or in review. | A message says it cannot be edited; no form. |
 | S8-23 | Only your own | As another Artist, open the edit address of the first Artist's rejected track. | "This track is not yours to edit." |
+| S8-24 | Name needed to post | As an Artist with no name in the profile, fill in the form and submit. | A message asks for the artist name first; nothing is sent. |
+| S8-25 | Name shows to others (D-007) | Save a name in the profile, post a track, approve it. As a Goer open Discover, the track page and the artist page. | All three show the artist's name. |
+| S8-26 | Name change follows | As the Artist change the name in the profile. As a Goer reload Discover. | The track and the artist show the new name. |
