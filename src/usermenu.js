@@ -31,6 +31,7 @@ export function displayName(profile, session) {
 export function menuLinks(profile, admin) {
   const links = [{ href: '#/profile', text: 'Profile' }, { href: '#/tickets', text: 'My tickets' }, { href: '#/reminders', text: 'My reminders' }];
   if (profile?.role === 'host') links.push({ href: '#/my-events', text: 'My events' });
+  if (profile?.role === 'artist') links.push({ href: '#/my-music', text: 'My music' });
   if (admin === true) links.push({ href: '#/review', text: 'Review queue' });
   return links;
 }

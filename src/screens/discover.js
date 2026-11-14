@@ -7,6 +7,9 @@ import { startPreviews } from '../events/preview.js';
 import { hostsFrom } from '../events/discovery.js';
 import { eventCard, hostCard } from '../events/cards.js';
 import { spotlight } from '../events/spotlight.js';
+import { listLiveTracks } from '../music/api.js';
+import { trackCard, artistCard } from '../music/cards.js';
+import { artistsFrom } from '../music/rules.js';
 import { clipUrl } from '../events/api.js';
 import { CATEGORIES, formatWhen } from '../events/rules.js';
 import { SAMPLE_SECTIONS, initials } from '../sample.js';
@@ -144,22 +147,35 @@ export async function renderDiscover({ session }) {
     await categorySections(liveEvents),
   ];
 
-  const music = SAMPLE_SECTIONS.find((sample) => sample.kind === 'artist');
-  const musicSection = section(music.title, music.items.map((item) => sampleCard('artist', item)));
-
   if (liveEvents.length > 0) {
     content.push(section('Popular hosts', hostsFrom(liveEvents).slice(0, 12).map(hostCard)));
   } else {
     const hosts = SAMPLE_SECTIONS.find((sample) => sample.kind === 'host');
     content.push(section(hosts.title, hosts.items.map((item) => sampleCard('host', item))));
   }
-  content.push(el('p', { class: 'notice', text: 'The music below is a sample until artists can post (Sprint 8).' }));
-  content.push(musicSection);
+  // New music: real tracks once artists have posted, a sample until then.
+  let tracks = [];
+  try {
+    tracks = await listLiveTracks();
+  } catch {
+    tracks = [];
+  }
+  if (tracks.length > 0) {
+    const cards = await Promise.all(tracks.map(trackCard));
+    const row = section('New music', cards.map((card) => card.node));
+    setTimeout(() => startPreviews(row, cards.map((card) => card.video)), 0);
+    content.push(row);
+    content.push(section('Artists', artistsFrom(tracks).slice(0, 12).map(artistCard)));
+  } else {
+    const music = SAMPLE_SECTIONS.find((sample) => sample.kind === 'artist');
+    content.push(el('p', { class: 'notice', text: 'The music below is a sample until artists post their first tracks.' }));
+    content.push(section(music.title, music.items.map((item) => sampleCard('artist', item))));
+  }
 
   if (profile?.role === 'host') {
     content.push(el('p', { class: 'link-row' }, ['You are signed in as a Host. ', linkTo('#/new-event', 'Promote an event')]));
   } else if (profile?.role === 'artist') {
-    content.push(el('p', { class: 'notice', text: 'You are signed in as an Artist. Posting your music arrives in Sprint 8.' }));
+    content.push(el('p', { class: 'link-row' }, ['You are signed in as an Artist. ', linkTo('#/new-track', 'Post your music')]));
   } else if (profile) {
     // Everyone starts as a Goer; this is the way to become a Host or an Artist.
     content.push(el('p', { class: 'link-row' }, ['Hosting an event or making music? ', linkTo('#/profile', 'Switch to Host or Artist')]));

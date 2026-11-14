@@ -97,7 +97,7 @@ test('the menu shows My reminders to everyone, My events to hosts and the review
   const texts = (profile, admin) => menuLinks(profile, admin).map((link) => link.text);
   assert.deepEqual(texts({ role: 'goer' }, false), ['Profile', 'My tickets', 'My reminders']);
   assert.deepEqual(texts({ role: 'host' }, false), ['Profile', 'My tickets', 'My reminders', 'My events']);
-  assert.deepEqual(texts({ role: 'artist' }, false), ['Profile', 'My tickets', 'My reminders']);
+  assert.deepEqual(texts({ role: 'artist' }, false), ['Profile', 'My tickets', 'My reminders', 'My music']);
   assert.deepEqual(texts({ role: 'goer' }, true), ['Profile', 'My tickets', 'My reminders', 'Review queue']);
   assert.deepEqual(texts({ role: 'host' }, true), ['Profile', 'My tickets', 'My reminders', 'My events', 'Review queue']);
   assert.deepEqual(texts(null, false), ['Profile', 'My tickets', 'My reminders']);

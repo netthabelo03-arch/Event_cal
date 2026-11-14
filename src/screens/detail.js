@@ -13,15 +13,19 @@ import { MAX_CLIP_SECONDS } from '../rules/clip.js';
 import { CATEGORIES, formatWhen, isEventId, statusOf } from '../events/rules.js';
 import { friendlyAuthError } from '../auth/errors.js';
 import { findSample, initials } from '../sample.js';
+import { getTrack, listArtistTracks, recordPlay } from '../music/api.js';
+import { trackCard } from '../music/cards.js';
+import { genreName, playsLabel } from '../music/rules.js';
 import { loadViewer } from '../viewer.js';
 import { topBar } from '../usermenu.js';
 import { el, linkTo, whileBusy } from '../dom.js';
 
-const KIND_LABEL = { event: 'Event', host: 'Host', artist: 'Artist' };
+const KIND_LABEL = { event: 'Event', host: 'Host', artist: 'Artist', track: 'Track' };
 const COMING = {
   event: 'The full event page, with its clip, reminders and tickets, arrives in Sprints 3 to 5.',
   host: 'Host pages arrive with the Discover feed in Sprint 3.',
-  artist: 'Artist pages arrive with the music feed in Sprint 8.',
+  artist: 'This is a sample artist. Real artists appear here once their music is approved.',
+  track: '',
 };
 
 const SEEN_KEY = 'event-cal.views';
@@ -163,6 +167,87 @@ async function realEvent(id, viewerId, navigate) {
   return parts;
 }
 
+/** Count a play at most once a day per track on this device. Never blocks the page. */
+function countPlay(trackId) {
+  const key = 'plusespot.plays';
+  let seen = {};
+  try {
+    seen = JSON.parse(window.localStorage.getItem(key) ?? '{}');
+  } catch {
+    seen = {};
+  }
+  const result = noteView(seen, trackId, Date.now());
+  try {
+    window.localStorage.setItem(key, JSON.stringify(result.seen));
+  } catch {
+    // Without storage every visit counts; that is acceptable.
+  }
+  if (result.count) recordPlay(trackId).catch(() => {});
+}
+
+/** A real track: its full clip, who made it and what it is. */
+async function realTrack(id, viewerId) {
+  let track;
+  try {
+    track = await getTrack(id);
+  } catch (error) {
+    return [el('p', { class: 'message message--error', role: 'alert', text: friendlyAuthError(error) })];
+  }
+  if (track === null) {
+    return [el('h1', { class: 'title', text: 'Not found' }), el('p', { class: 'lead', text: 'This track is no longer available.' })];
+  }
+  const video = el('video', { class: 'clip', controls: '', preload: 'auto', playsinline: '' });
+  video.src = await clipUrl(track.clip_path);
+  // Never play past the 30-second limit, even if a longer clip got through.
+  video.addEventListener('timeupdate', () => {
+    if (video.currentTime >= MAX_CLIP_SECONDS) video.pause();
+  });
+  setTimeout(() => autoplayFull(video), 0);
+
+  const parts = [video];
+  if (track.status !== 'live') {
+    const status = statusOf(track.status);
+    parts.push(el('span', { class: `chip chip--${status.tone}`, text: track.artist_id === viewerId ? `${status.label} — only you can see this` : status.label }));
+  }
+  parts.push(
+    el('div', { class: 'stack' }, [
+      el('p', { class: 'caption', text: `Track · ${genreName(track.genre)}` }),
+      el('h1', { class: 'title', text: track.title }),
+      el('p', { class: 'lead' }, ['By ', linkTo(`#/artist/${track.artist_id}`, track.artist_name || 'an artist')]),
+      ...(track.status === 'live' ? [el('p', { class: 'event-row__meta', text: playsLabel(track.play_count) })] : []),
+    ]),
+  );
+  if (track.about) parts.push(el('p', { class: 'detail__text', text: track.about }));
+  if (track.status === 'live' && track.artist_id !== viewerId) countPlay(track.id);
+  return parts;
+}
+
+/** A real artist's page: their name and live tracks. */
+async function realArtist(artistId) {
+  let tracks;
+  try {
+    tracks = await listArtistTracks(artistId);
+  } catch (error) {
+    return [el('p', { class: 'message message--error', role: 'alert', text: friendlyAuthError(error) })];
+  }
+  if (tracks.length === 0) {
+    return [el('h1', { class: 'title', text: 'No music yet' }), el('p', { class: 'lead', text: 'This artist has no tracks live right now.' })];
+  }
+  const name = tracks.find((track) => track.artist_name)?.artist_name || 'An artist';
+  const cards = await Promise.all(tracks.map(trackCard));
+  return [
+    el('div', { class: 'detail detail--host' }, [
+      el('span', { class: 'card__art detail__art', 'aria-hidden': 'true', text: initials(name) || 'A' }),
+      el('div', { class: 'stack' }, [
+        el('p', { class: 'caption', text: 'Artist' }),
+        el('h1', { class: 'title', text: name }),
+        el('p', { class: 'lead', text: `${tracks.length} ${tracks.length === 1 ? 'track' : 'tracks'}` }),
+      ]),
+    ]),
+    el('div', { class: 'grid' }, cards.map((card) => card.node)),
+  ];
+}
+
 export async function renderDetail({ session, kind, id, navigate }) {
   const { profile, admin } = await loadViewer(session);
   const back = linkTo('#/', 'Back to Discover');
@@ -174,6 +259,12 @@ export async function renderDetail({ session, kind, id, navigate }) {
   }
   if (kind === 'host' && isEventId(id)) {
     return [bar, back, ...(await realHost(id))];
+  }
+  if (kind === 'track' && isEventId(id)) {
+    return [bar, back, ...(await realTrack(id, session.user.id))];
+  }
+  if (kind === 'artist' && isEventId(id)) {
+    return [bar, back, ...(await realArtist(id))];
   }
 
   const item = findSample(kind, id);

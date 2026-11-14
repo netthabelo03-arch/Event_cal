@@ -177,6 +177,12 @@ Each ticket gets in once: a second scan shows "Already used" with the time of th
 
 A host opens My events, taps **Boost this clip** under a live event and chooses 1 day (R50), 3 days (R120) or 7 days (R250). Once paid, the event shows first on Discover, in the feed and in search, marked **Promoted**, until the boost ends; a second boost adds time. Prices are set in `boost_price_cents` in the database script (and shown from `src/boosts/rules.js`; keep the two the same). Boosts use the same payment mode as tickets: demo while `PAYMENTS_MODE = demo`, Paystack once `PAYSTACK_SECRET_KEY` is set.
 
+## Music (Sprint 8)
+
+1. **Database.** In Supabase, SQL Editor, paste `supabase/009_tracks.sql` and Run.
+
+A person switches to **Artist** in their profile and opens **My music** from the menu. **Post your music** takes a video clip of at most 30 seconds, a track name and a genre. An admin approves it in the **Review queue** (under "Music"), and it then shows under **New music** on Discover, with the artist under **Artists**. Each track has its own page that plays the full clip and counts plays; each artist has a page listing their live tracks. Clips are kept in the same storage as event clips.
+
 ## Opening the app
 
 The app must be opened through a web address, not by double-clicking `index.html`; browsers block this kind of JavaScript when a file is opened directly.

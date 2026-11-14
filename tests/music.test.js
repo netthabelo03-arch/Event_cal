@@ -1,0 +1,62 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { GENRES, genreName, checkTrack, checkTrackTitle, playsLabel, artistsFrom } from '../src/music/rules.js';
+import { parseRoute, resolveRoute, hashFor, safeNext } from '../src/router.js';
+
+const sql = readFileSync(new URL('../supabase/009_tracks.sql', import.meta.url), 'utf8');
+const ID = '3f2c1a9e-8b7d-4c6a-9e5f-0a1b2c3d4e5f';
+const clip = { type: 'video/mp4', size: 1000 };
+
+test('the genres in the app are the genres the database accepts', () => {
+  const inSql = sql.match(/genre in \(([^)]+)\)/)[1].split(',').map((part) => part.trim().replaceAll("'", ''));
+  assert.deepEqual(GENRES.map((genre) => genre.id), inSql);
+  assert.equal(genreName('hiphop'), 'Hip hop');
+  assert.equal(genreName('nope'), 'Music');
+});
+
+test('a track needs a clip, a name and a genre', () => {
+  assert.deepEqual(checkTrack({ title: 'Sunrise', genre: 'amapiano', about: '', clipFile: clip, clipSeconds: 28 }), { ok: true, errors: {} });
+  const empty = checkTrack({ title: '', genre: null, about: '', clipFile: null, clipSeconds: null });
+  assert.equal(empty.ok, false);
+  assert.match(empty.errors.clip, /of your music/);
+  assert.ok(empty.errors.title && empty.errors.genre);
+  assert.ok(checkTrack({ title: 'Sunrise', genre: 'amapiano', about: 'x'.repeat(501), clipFile: clip, clipSeconds: 10 }).errors.about);
+  assert.ok(checkTrack({ title: 'Sunrise', genre: 'amapiano', clipFile: clip, clipSeconds: 31 }).errors.clip, 'over 30 seconds is refused');
+  assert.equal(checkTrackTitle('A'), 'The name is too short.');
+  assert.equal(checkTrackTitle('x'.repeat(81)), 'Keep the name to 80 characters or fewer.');
+});
+
+test('plays are counted in words', () => {
+  assert.equal(playsLabel(0), '0 plays');
+  assert.equal(playsLabel(1), '1 play');
+  assert.equal(playsLabel(12), '12 plays');
+  assert.equal(playsLabel(undefined), '0 plays');
+});
+
+test('artists are listed from their tracks, most tracks first', () => {
+  const artists = artistsFrom([
+    { artist_id: 'a', artist_name: 'Zee' }, { artist_id: 'b', artist_name: '' },
+    { artist_id: 'b', artist_name: 'Mpho' }, { artist_id: 'b', artist_name: 'Mpho' }, { artist_id: 'c', artist_name: '' },
+  ]);
+  assert.deepEqual(artists, [{ id: 'b', name: 'Mpho', count: 3 }, { id: 'a', name: 'Zee', count: 1 }, { id: 'c', name: 'An artist', count: 1 }]);
+});
+
+test('music screens have addresses and need a signed-in person', () => {
+  assert.deepEqual(parseRoute('#/my-music'), { screen: 'my-music' });
+  assert.deepEqual(parseRoute('#/new-track'), { screen: 'new-track' });
+  assert.deepEqual(parseRoute(`#/track/${ID}`), { screen: 'detail', kind: 'track', id: ID });
+  assert.equal(hashFor({ screen: 'detail', kind: 'track', id: ID }), `#/track/${ID}`);
+  assert.deepEqual(resolveRoute({ screen: 'new-track' }, false), { screen: 'signin' });
+  assert.equal(safeNext('#/my-music'), '#/my-music');
+});
+
+test('tracks are locked down in the database script', () => {
+  assert.match(sql, /alter table public\.tracks enable row level security;/);
+  assert.match(sql, /profiles\.role = 'artist'/);
+  assert.match(sql, /status = 'in_review'/);
+  assert.match(sql, /clip_seconds <= 30/);
+  assert.match(sql, /clip_path like artist_id::text \|\| '\/%'/);
+  assert.match(sql, /grant update \(status, reject_reason, reviewed_at\) on public\.tracks to authenticated;/);
+  assert.doesNotMatch(sql, /grant insert \([^)]*play_count/);
+});

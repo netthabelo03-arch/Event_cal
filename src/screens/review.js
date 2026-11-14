@@ -2,12 +2,39 @@
 // the event. Approved events go live in Discover.
 
 import { listReviewQueue, reviewEvent, clipUrl } from '../events/api.js';
+import { listTrackQueue, reviewTrack } from '../music/api.js';
+import { genreName } from '../music/rules.js';
 import { CATEGORIES, formatWhen } from '../events/rules.js';
 import { MAX_CLIP_SECONDS } from '../rules/clip.js';
 import { friendlyAuthError } from '../auth/errors.js';
 import { loadViewer } from '../viewer.js';
 import { topBar } from '../usermenu.js';
 import { el, linkTo, whileBusy } from '../dom.js';
+
+/**
+ * The same card for an artist's track: shown through the event card by giving
+ * it the lines to show and the function that saves the decision.
+ */
+function trackAsItem(track) {
+  return {
+    ...track,
+    lines: [genreName(track.genre), `Posted by ${track.artist_name || 'an artist with no name yet'}`],
+    text: track.about || 'No description.',
+    who: 'artist',
+    decide: (choice) => reviewTrack(track.id, choice),
+  };
+}
+
+function eventAsItem(event) {
+  const categoryName = CATEGORIES.find((item) => item.id === event.category)?.name ?? event.category;
+  return {
+    ...event,
+    lines: [`${formatWhen(event.starts_at)} · ${event.venue} · ${categoryName}`, `Posted by ${event.host_name || 'a host with no name yet'}`],
+    text: event.description || 'No description.',
+    who: 'host',
+    decide: (choice) => reviewEvent(event.id, choice),
+  };
+}
 
 async function reviewCard(event, onDone) {
   const video = el('video', { class: 'clip', controls: '', preload: 'metadata', playsinline: '' });
@@ -23,7 +50,6 @@ async function reviewCard(event, onDone) {
     length.className = over ? 'field__error' : 'event-row__meta';
   });
 
-  const categoryName = CATEGORIES.find((item) => item.id === event.category)?.name ?? event.category;
   const reason = el('input', { id: `reason-${event.id}`, type: 'text', class: 'input', maxlength: '300' });
   const error = el('p', { class: 'field__error', role: 'alert' });
   error.hidden = true;
@@ -33,12 +59,11 @@ async function reviewCard(event, onDone) {
   const card = el('li', { class: 'review-card' }, [
     video,
     el('span', { class: 'event-row__title', text: event.title }),
-    el('span', { class: 'event-row__meta', text: `${formatWhen(event.starts_at)} · ${event.venue} · ${categoryName}` }),
-    el('span', { class: 'event-row__meta', text: `Posted by ${event.host_name || 'a host with no name yet'}` }),
+    ...event.lines.map((line) => el('span', { class: 'event-row__meta', text: line })),
     length,
-    el('p', { class: 'review-card__text', text: event.description || 'No description.' }),
+    el('p', { class: 'review-card__text', text: event.text }),
     el('div', { class: 'field' }, [
-      el('label', { for: reason.id, class: 'field__label', text: 'Reason, if rejecting (the host sees this)' }),
+      el('label', { for: reason.id, class: 'field__label', text: `Reason, if rejecting (the ${event.who} sees this)` }),
       reason,
     ]),
     error,
@@ -48,13 +73,13 @@ async function reviewCard(event, onDone) {
   async function decide(button, busyText, approveIt) {
     error.hidden = true;
     if (!approveIt && reason.value.trim().length === 0) {
-      error.textContent = 'Give the host a reason for rejecting.';
+      error.textContent = `Give the ${event.who} a reason for rejecting.`;
       error.hidden = false;
       return;
     }
     await whileBusy(button, busyText, async () => {
       try {
-        await reviewEvent(event.id, { approve: approveIt, reason: reason.value });
+        await event.decide({ approve: approveIt, reason: reason.value });
         video.pause();
         card.remove();
         onDone();
@@ -79,22 +104,30 @@ export async function renderReview({ session }) {
   if (!admin) return [...head, el('p', { class: 'notice', text: 'This page is for admins only.' })];
 
   let events;
+  let tracks;
   try {
     events = await listReviewQueue();
+    // Before the Sprint 8 database script is run there is no tracks table yet.
+    tracks = await listTrackQueue().catch(() => []);
   } catch (error) {
     return [...head, el('p', { class: 'message message--error', role: 'alert', text: friendlyAuthError(error) })];
   }
 
   const count = el('p', { class: 'lead', role: 'status' });
-  let waiting = events.length;
+  let waiting = events.length + tracks.length;
   const update = () => {
-    count.textContent = waiting === 0 ? 'Nothing is waiting for review.' : `${waiting} ${waiting === 1 ? 'event is' : 'events are'} waiting.`;
+    count.textContent = waiting === 0 ? 'Nothing is waiting for review.' : `${waiting} ${waiting === 1 ? 'item is' : 'items are'} waiting.`;
   };
   update();
-
-  const cards = await Promise.all(events.map((event) => reviewCard(event, () => {
+  const done = () => {
     waiting -= 1;
     update();
-  })));
-  return [...head, count, el('ul', { class: 'event-list' }, cards)];
+  };
+
+  const eventCards = await Promise.all(events.map((event) => reviewCard(eventAsItem(event), done)));
+  const trackCards = await Promise.all(tracks.map((track) => reviewCard(trackAsItem(track), done)));
+  const content = [...head, count];
+  if (eventCards.length > 0) content.push(el('h2', { class: 'section__title', text: 'Events' }), el('ul', { class: 'event-list' }, eventCards));
+  if (trackCards.length > 0) content.push(el('h2', { class: 'section__title', text: 'Music' }), el('ul', { class: 'event-list' }, trackCards));
+  return content;
 }

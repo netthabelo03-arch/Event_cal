@@ -21,6 +21,8 @@ import { renderReminders } from './screens/reminders.js';
 import { renderTickets } from './screens/tickets.js';
 import { renderOrder } from './screens/order.js';
 import { renderScan } from './screens/scan.js';
+import { renderMyMusic } from './screens/mymusic.js';
+import { renderNewTrack } from './screens/newtrack.js';
 import { forgetViewer } from './viewer.js';
 
 const SCREENS = {
@@ -40,6 +42,8 @@ const SCREENS = {
   tickets: renderTickets,
   order: renderOrder,
   scan: renderScan,
+  'my-music': renderMyMusic,
+  'new-track': renderNewTrack,
 };
 
 const root = document.getElementById('app');
