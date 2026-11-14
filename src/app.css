@@ -926,3 +926,12 @@ body.full .app { max-width: none; padding: 0; gap: 0; }
 
 /* Disputes (Sprint 8). */
 .dispute { gap: 8px; margin-top: 4px; }
+
+/* The track player shows its video as the feed does: whole (never cut) over a
+   blurred copy, in a tall frame. On phones it fills the width of the screen. */
+.player { aspect-ratio: 9 / 16; max-width: 420px; max-height: 82vh; max-height: 82dvh; }
+.player__video { object-fit: contain; background: transparent; }
+.player__shade { background: linear-gradient(transparent 55%, rgb(0 0 0 / 0.85)); }
+@media (max-width: 480px) {
+  .player { max-width: none; width: auto; margin: 0 -16px; border-radius: 0; border-left: 0; border-right: 0; }
+}

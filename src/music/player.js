@@ -1,9 +1,10 @@
 // The track player: the track's audio plays while its short video loops
-// silently behind it. One big button plays and pauses; the bar shows how far
+// silently behind it, shown the way the feed shows clips (whole, over a blurred copy). One big button plays and pauses; the bar shows how far
 // the track is and lets people jump.
 
 import { formatTime } from './rules.js';
 import { mayAutoplay } from '../events/preview.js';
+import { attachBackdrop } from '../events/feed.js';
 import { el, icon } from '../dom.js';
 
 const PLAY = '<path d="M8 5v14l11-7z" fill="currentColor" stroke="none"></path>';
@@ -25,6 +26,10 @@ export function trackPlayer({ audioSrc, videoSrc, title, seconds = null }) {
   video.muted = true;
   video.loop = true;
   video.src = videoSrc;
+  // As in the feed: the video is shown whole, never cut, whatever its shape,
+  // and a blurred copy of it fills the frame behind it.
+  const backdrop = el('canvas', { class: 'feed__backdrop player__backdrop', width: '36', height: '64', 'aria-hidden': 'true' });
+  attachBackdrop(video, backdrop);
   const audio = el('audio', { preload: 'metadata' });
   audio.src = audioSrc;
 
@@ -76,6 +81,7 @@ export function trackPlayer({ audioSrc, videoSrc, title, seconds = null }) {
   });
 
   const node = el('div', { class: 'player' }, [
+    backdrop,
     video,
     el('div', { class: 'player__shade', 'aria-hidden': 'true' }),
     el('div', { class: 'player__controls' }, [button, el('div', { class: 'player__progress' }, [now, bar, total])]),
