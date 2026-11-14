@@ -923,3 +923,6 @@ body.full .app { max-width: none; padding: 0; gap: 0; }
 .player__time { min-width: 38px; font-size: 13px; font-variant-numeric: tabular-nums; color: var(--color-text); text-align: center; }
 .player__bar { flex: 1; min-width: 0; height: 28px; accent-color: var(--color-accent); cursor: pointer; }
 .review-card__audio { width: 100%; }
+
+/* Disputes (Sprint 8). */
+.dispute { gap: 8px; margin-top: 4px; }

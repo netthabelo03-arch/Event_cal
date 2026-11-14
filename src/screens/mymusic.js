@@ -3,13 +3,61 @@
 
 import { listMyTracks } from '../music/api.js';
 import { genreName, playsLabel, formatTime } from '../music/rules.js';
+import { canDispute, checkReason, disputeStatus, disputeErrorMessage, lodgedMessage, hoursLabel, TURNAROUND_HOURS, fileDispute, listMyDisputes } from '../music/disputes.js';
 import { statusOf } from '../events/rules.js';
 import { friendlyAuthError } from '../auth/errors.js';
 import { loadViewer } from '../viewer.js';
 import { topBar } from '../usermenu.js';
-import { el, linkTo } from '../dom.js';
+import { el, linkTo, whileBusy } from '../dom.js';
 
-function trackRow(track) {
+/**
+ * "Wrong track? File a dispute": the artist says what is wrong and is given a
+ * ticket number and the time by which they will hear back.
+ */
+function disputePanel(track) {
+  const open = el('button', { type: 'button', class: 'button button--quiet button--small', text: 'Wrong track? File a dispute' });
+  const panel = el('div', { class: 'stack dispute' }, [open]);
+  open.addEventListener('click', () => {
+    const reason = el('textarea', { id: `dispute-${track.id}`, class: 'input input--area', rows: '3', maxlength: '500' });
+    const problem = el('p', { class: 'field__error', role: 'alert' });
+    problem.hidden = true;
+    const send = el('button', { type: 'button', class: 'button button--primary', text: 'File dispute' });
+    const cancel = el('button', { type: 'button', class: 'text-link', text: 'Cancel' });
+    cancel.addEventListener('click', () => panel.replaceChildren(open));
+    send.addEventListener('click', async () => {
+      const wrong = checkReason(reason.value);
+      problem.textContent = wrong ?? '';
+      problem.hidden = !wrong;
+      if (wrong) return;
+      let lodged = null;
+      await whileBusy(send, 'Filing…', async () => {
+        try {
+          lodged = await fileDispute(track.id, reason.value);
+        } catch (error) {
+          problem.textContent = disputeErrorMessage(error);
+          problem.hidden = false;
+        }
+      });
+      if (lodged) {
+        panel.replaceChildren(
+          el('p', { class: 'message message--success', role: 'status', text: lodgedMessage(lodged) }),
+          el('p', { class: 'event-row__meta', text: `Keep the ticket number ${lodged.ref}. The answer will show here in My music.` }),
+        );
+      }
+    });
+    panel.replaceChildren(
+      el('label', { for: reason.id, class: 'field__label', text: 'What is wrong with this track?' }),
+      reason,
+      el('p', { class: 'field__hint', text: `For example: the wrong song or video was uploaded. You get a ticket number and an answer within ${hoursLabel(TURNAROUND_HOURS)}. If we take the track down, you can correct it and send it back.` }),
+      problem,
+      el('div', { class: 'link-row' }, [send, cancel]),
+    );
+    reason.focus?.();
+  });
+  return panel;
+}
+
+function trackRow(track, disputes) {
   const status = statusOf(track.status);
   const lines = [
     el('span', { class: 'event-row__title', text: track.title }),
@@ -29,6 +77,13 @@ function trackRow(track) {
     view.className = 'text-link event-row__link';
     lines.push(view);
   }
+  // This track's disputes, newest first: the open one, then earlier answers.
+  for (const dispute of disputes) {
+    const state = disputeStatus(dispute);
+    lines.push(el('span', { class: `chip chip--${state.tone}`, text: state.text }));
+    if (state.note) lines.push(el('span', { class: 'event-row__meta', text: `Our answer: ${state.note}` }));
+  }
+  if (canDispute(track, disputes)) lines.push(disputePanel(track));
   return el('li', { class: 'event-row' }, lines);
 }
 
@@ -59,5 +114,7 @@ export async function renderMyMusic({ session }) {
   }
   const page = linkTo(`#/artist/${session.user.id}`, 'See your artist page');
   page.className = 'text-link';
-  return [...head, post, page, el('ul', { class: 'event-list' }, tracks.map(trackRow))];
+  const disputes = await listMyDisputes(session.user.id);
+  const rows = tracks.map((track) => trackRow(track, disputes.filter((dispute) => dispute.track_id === track.id)));
+  return [...head, post, page, el('ul', { class: 'event-list' }, rows)];
 }

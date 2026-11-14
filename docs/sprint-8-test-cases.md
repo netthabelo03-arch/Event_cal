@@ -39,3 +39,14 @@ Before testing, run `supabase/009_tracks.sql` (README, "Music (Sprint 8)"). You 
 | S8-33 | End and leave | Let the track finish; play again and go back to Discover. | At the end the video stops and the button shows Play. Leaving the page stops the music. |
 | S8-34 | Track without audio | Open a track posted with a video only. | The video plays with its own sound and normal controls, as before. |
 | S8-35 | Add audio when sending back | Edit a rejected track and choose an audio file. | It is sent back with the new audio; without choosing one, the audio it had is kept. |
+| S8-36 | Way in to a dispute | As the Artist, open My music. | A live or in-review track shows "Wrong track? File a dispute". A track that was not approved does not (it has "Edit and send back"). |
+| S8-37 | Reason needed | Tap it and tap File dispute with nothing typed, then with "wrong". | A message asks what is wrong, then for more detail; nothing is filed. |
+| S8-38 | File a dispute | Type a reason of a sentence and tap File dispute. | "Dispute lodged. Your ticket number is PS-…. We will get back to you within 24 hours, by <day and time 24 hours from now>." |
+| S8-39 | Shows in My music | Reload My music. | The track shows "Dispute PS-… open · reply by <time>". The dispute button is gone (one open dispute per track). |
+| S8-40 | Admin sees it first | As the admin, open Review queue. | "Disputes" is the first section: ticket number, track, artist, the reason, "Reply by <time>", the video and audio to play. |
+| S8-41 | Keep needs a note | Tap Keep the track with no note. | "Tell the artist why the track is being kept." Nothing changes. |
+| S8-42 | Take the track down | Tap Take the track down. | The card goes. On Discover the track is gone. |
+| S8-43 | Artist corrects it | As the Artist, open My music. | The track is "Not approved" with "Taken down at your request (dispute PS-…)", shows "Dispute PS-… · track taken down", and has "Edit and send back". Edit it with the right files and send it back. |
+| S8-44 | Keep the track | File a dispute on another track; as admin type a note and tap Keep the track. | The track stays live. My music shows "Dispute PS-… · track kept" and "Our answer: <the note>". The artist can file a new dispute. |
+| S8-45 | Overdue | (Admin) Leave a dispute open past its reply-by time. | In the Review queue it reads "Overdue: reply was due <time>" in red. |
+| S8-46 | Only your own | As another Artist, there is no dispute button on tracks that are not yours (checked in the database too). | No way to dispute someone else's track. |

@@ -4,6 +4,7 @@
 import { listReviewQueue, reviewEvent, clipUrl } from '../events/api.js';
 import { listTrackQueue, reviewTrack, audioUrl } from '../music/api.js';
 import { genreName, formatTime, MAX_AUDIO_SECONDS } from '../music/rules.js';
+import { listOpenDisputes, resolveDispute, isOverdue, disputeErrorMessage } from '../music/disputes.js';
 import { CATEGORIES, formatWhen } from '../events/rules.js';
 import { MAX_CLIP_SECONDS } from '../rules/clip.js';
 import { friendlyAuthError } from '../auth/errors.js';
@@ -35,6 +36,62 @@ function eventAsItem(event) {
     who: 'host',
     decide: (choice) => reviewEvent(event.id, choice),
   };
+}
+
+/** A dispute an artist filed: listen to the track, then take it down or keep it. */
+async function disputeCard(dispute, onDone) {
+  const track = dispute.tracks ?? {};
+  const media = [];
+  if (track.clip_path) {
+    const video = el('video', { class: 'clip', controls: '', preload: 'metadata', playsinline: '' });
+    video.src = await clipUrl(track.clip_path);
+    media.push(video);
+  }
+  if (track.audio_path) {
+    const audio = el('audio', { class: 'review-card__audio', controls: '', preload: 'metadata' });
+    audio.src = await audioUrl(track.audio_path);
+    media.push(audio);
+  }
+  const overdue = isOverdue(dispute);
+  const note = el('input', { id: `note-${dispute.id}`, type: 'text', class: 'input', maxlength: '300' });
+  const error = el('p', { class: 'field__error', role: 'alert' });
+  error.hidden = true;
+  const keep = el('button', { type: 'button', class: 'button button--quiet', text: 'Keep the track' });
+  const takeDown = el('button', { type: 'button', class: 'button button--danger', text: 'Take the track down' });
+  const card = el('li', { class: 'review-card' }, [
+    ...media,
+    el('span', { class: 'event-row__title', text: `${dispute.ref} · ${track.title ?? 'A track'}` }),
+    el('span', { class: 'event-row__meta', text: `${genreName(track.genre)} · by ${track.artist_name || 'an artist'} · ${track.status === 'live' ? 'live' : 'in review'}` }),
+    el('span', { class: overdue ? 'field__error' : 'event-row__meta', text: `${overdue ? 'Overdue: reply was due' : 'Reply by'} ${formatWhen(dispute.due_at)}` }),
+    el('p', { class: 'review-card__text', text: dispute.reason }),
+    el('div', { class: 'field' }, [
+      el('label', { for: note.id, class: 'field__label', text: 'Note to the artist (needed if you keep the track)' }),
+      note,
+    ]),
+    error,
+    el('div', { class: 'field-pair' }, [keep, takeDown]),
+  ]);
+  async function decide(button, busyText, down) {
+    error.hidden = true;
+    if (!down && note.value.trim().length === 0) {
+      error.textContent = 'Tell the artist why the track is being kept.';
+      error.hidden = false;
+      return;
+    }
+    await whileBusy(button, busyText, async () => {
+      try {
+        await resolveDispute(dispute.id, { takeDown: down, note: note.value });
+        card.remove();
+        onDone();
+      } catch (problem) {
+        error.textContent = disputeErrorMessage(problem);
+        error.hidden = false;
+      }
+    });
+  }
+  keep.addEventListener('click', () => decide(keep, 'Saving…', false));
+  takeDown.addEventListener('click', () => decide(takeDown, 'Taking down…', true));
+  return card;
 }
 
 async function reviewCard(event, onDone) {
@@ -122,16 +179,18 @@ export async function renderReview({ session }) {
 
   let events;
   let tracks;
+  let disputes;
   try {
     events = await listReviewQueue();
-    // Before the Sprint 8 database script is run there is no tracks table yet.
+    // Before the Sprint 8 database scripts are run these tables are not there yet.
     tracks = await listTrackQueue().catch(() => []);
+    disputes = await listOpenDisputes().catch(() => []);
   } catch (error) {
     return [...head, el('p', { class: 'message message--error', role: 'alert', text: friendlyAuthError(error) })];
   }
 
   const count = el('p', { class: 'lead', role: 'status' });
-  let waiting = events.length + tracks.length;
+  let waiting = events.length + tracks.length + disputes.length;
   const update = () => {
     count.textContent = waiting === 0 ? 'Nothing is waiting for review.' : `${waiting} ${waiting === 1 ? 'item is' : 'items are'} waiting.`;
   };
@@ -143,7 +202,10 @@ export async function renderReview({ session }) {
 
   const eventCards = await Promise.all(events.map((event) => reviewCard(eventAsItem(event), done)));
   const trackCards = await Promise.all(tracks.map((track) => reviewCard(trackAsItem(track), done)));
+  const disputeCards = await Promise.all(disputes.map((dispute) => disputeCard(dispute, done)));
   const content = [...head, count];
+  // Disputes come first: each has a time by which the artist was promised an answer.
+  if (disputeCards.length > 0) content.push(el('h2', { class: 'section__title', text: 'Disputes' }), el('ul', { class: 'event-list' }, disputeCards));
   if (eventCards.length > 0) content.push(el('h2', { class: 'section__title', text: 'Events' }), el('ul', { class: 'event-list' }, eventCards));
   if (trackCards.length > 0) content.push(el('h2', { class: 'section__title', text: 'Music' }), el('ul', { class: 'event-list' }, trackCards));
   return content;
