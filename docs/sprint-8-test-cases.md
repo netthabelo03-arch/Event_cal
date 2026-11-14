@@ -41,7 +41,7 @@ Before testing, run `supabase/009_tracks.sql` (README, "Music (Sprint 8)"). You 
 | S8-35 | Add audio when sending back | Edit a rejected track and choose an audio file. | It is sent back with the new audio; without choosing one, the audio it had is kept. |
 | S8-36 | Way in to a dispute | As the Artist, open My music. | A live or in-review track shows "Wrong track? File a dispute". A track that was not approved does not (it has "Edit and send back"). |
 | S8-37 | Reason needed | Tap it and tap File dispute with nothing typed, then with "wrong". | A message asks what is wrong, then for more detail; nothing is filed. |
-| S8-38 | File a dispute | Type a reason of a sentence and tap File dispute. | "Dispute lodged. Your ticket number is PS-…. We will get back to you within 24 hours, by <day and time 24 hours from now>." |
+| S8-38 | File a dispute | Type a reason of a sentence and tap File dispute. | "Dispute lodged. Your ticket number is PS-<today's date as YYYYMMDD>-<number>, for example PS-20261114-0001. We will get back to you within 24 hours, by <day and time 24 hours from now>." |
 | S8-39 | Shows in My music | Reload My music. | The track shows "Dispute PS-… open · reply by <time>". The dispute button is gone (one open dispute per track). |
 | S8-40 | Admin sees it first | As the admin, open Review queue. | "Disputes" is the first section: ticket number, track, artist, the reason, "Reply by <time>", the video and audio to play. |
 | S8-41 | Keep needs a note | Tap Keep the track with no note. | "Tell the artist why the track is being kept." Nothing changes. |

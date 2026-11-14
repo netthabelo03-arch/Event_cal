@@ -18,7 +18,8 @@ create sequence if not exists public.track_dispute_number;
 
 create table if not exists public.track_disputes (
   id uuid primary key default gen_random_uuid(),
-  -- The ticket number the artist is given, for example PS-000042.
+  -- The ticket number the artist is given: PS, the date it was filed, a running
+  -- number. For example PS-20261114-0042.
   ref text not null unique,
   track_id uuid not null references public.tracks (id) on delete cascade,
   artist_id uuid not null references auth.users (id) on delete cascade,
@@ -78,7 +79,9 @@ begin
   if exists (select 1 from public.track_disputes d where d.track_id = p_track_id and d.status = 'open') then
     raise exception 'already_open' using errcode = '22023';
   end if;
-  new_ref := 'PS-' || lpad(nextval('public.track_dispute_number')::text, 6, '0');
+  -- PS-<date filed, Johannesburg time, as YYYYMMDD>-<running number>, for example PS-20261114-0042.
+  new_ref := 'PS-' || to_char(now() at time zone 'Africa/Johannesburg', 'YYYYMMDD') || '-'
+    || lpad(nextval('public.track_dispute_number')::text, 4, '0');
   insert into public.track_disputes (ref, track_id, artist_id, reason, due_at)
   values (new_ref, p_track_id, caller, left(btrim(p_reason), 500), reply_by);
   return query select new_ref, reply_by, public.dispute_turnaround_hours();

@@ -28,19 +28,19 @@ test('a dispute needs a real reason', () => {
 });
 
 test('the artist is told the ticket number and the turnaround time', () => {
-  const message = lodgedMessage({ ref: 'PS-000042', due_at: '2026-11-15T18:13:00Z', hours: 24 });
-  assert.match(message, /ticket number is PS-000042/);
+  const message = lodgedMessage({ ref: 'PS-20261114-0042', due_at: '2026-11-15T18:13:00Z', hours: 24 });
+  assert.match(message, /ticket number is PS-20261114-0042/);
   assert.match(message, /within 24 hours, by Sun 15 Nov · 20:13\.$/);
 });
 
 test('each dispute reads clearly in the artist\'s list', () => {
-  const open = { ref: 'PS-000001', status: 'open', due_at: '2026-11-15T18:00:00Z' };
-  assert.deepEqual(disputeStatus(open, NOW), { tone: 'waiting', text: 'Dispute PS-000001 open · reply by Sun 15 Nov · 20:00', note: '' });
+  const open = { ref: 'PS-20261114-0001', status: 'open', due_at: '2026-11-15T18:00:00Z' };
+  assert.deepEqual(disputeStatus(open, NOW), { tone: 'waiting', text: 'Dispute PS-20261114-0001 open · reply by Sun 15 Nov · 20:00', note: '' });
   assert.match(disputeStatus(open, NOW + 25 * 3600e3).text, /reply was due/);
   assert.equal(isOverdue(open, NOW), false);
   assert.equal(isOverdue(open, NOW + 25 * 3600e3), true);
-  assert.deepEqual(disputeStatus({ ref: 'PS-000002', status: 'resolved', outcome: 'taken_down', admin_note: '' }), { tone: 'good', text: 'Dispute PS-000002 · track taken down', note: '' });
-  assert.deepEqual(disputeStatus({ ref: 'PS-000003', status: 'resolved', outcome: 'kept', admin_note: 'It matches the title.' }), { tone: 'bad', text: 'Dispute PS-000003 · track kept', note: 'It matches the title.' });
+  assert.deepEqual(disputeStatus({ ref: 'PS-20261114-0002', status: 'resolved', outcome: 'taken_down', admin_note: '' }), { tone: 'good', text: 'Dispute PS-20261114-0002 · track taken down', note: '' });
+  assert.deepEqual(disputeStatus({ ref: 'PS-20261114-0003', status: 'resolved', outcome: 'kept', admin_note: 'It matches the title.' }), { tone: 'bad', text: 'Dispute PS-20261114-0003 · track kept', note: 'It matches the title.' });
   assert.equal(isOverdue({ status: 'resolved', due_at: '2020-01-01T00:00:00Z' }, NOW), false);
 });
 
@@ -57,5 +57,6 @@ test('disputes are locked down in the database script', () => {
   assert.match(sql, /t\.artist_id <> caller/);
   assert.match(sql, /if not public\.is_admin\(\) then raise exception 'admins_only'/);
   assert.match(sql, /unique index if not exists track_disputes_one_open/);
-  assert.match(sql, /'PS-' \|\| lpad\(nextval\('public\.track_dispute_number'\)::text, 6, '0'\)/);
+  // The ticket number carries the date it was filed (Johannesburg time) and a running number.
+  assert.match(sql, /'PS-' \|\| to_char\(now\(\) at time zone 'Africa\/Johannesburg', 'YYYYMMDD'\) \|\| '-'\s+\|\| lpad\(nextval\('public\.track_dispute_number'\)::text, 4, '0'\)/);
 });
