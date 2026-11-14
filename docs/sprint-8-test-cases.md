@@ -20,3 +20,10 @@ Before testing, run `supabase/009_tracks.sql` (README, "Music (Sprint 8)"). You 
 | S8-14 | Artist page | From the track page tap the artist's name. | The artist's page lists their live tracks. |
 | S8-15 | Rejected track | Post a second track; as admin reject it with a reason. | My music shows "Not approved" and the reason. It never appears on Discover. |
 | S8-16 | Events unaffected | As the admin, review a new event; as a Goer, open an event. | Works as before. |
+| S8-17 | Edit a rejected track | As the Artist, open My music. Under the rejected track tap "Edit and send back". | The form opens with the admin's reason at the top and the track's name, genre and description filled in. |
+| S8-18 | Send back, same clip | Change the name and tap "Send back for review" without choosing a clip. | "Your music is sent back for review". My music shows it as "In review" with the new name. |
+| S8-19 | Admin sees the history | As the admin, open Review queue. | The track is under Music with a line "Sent back after: <the earlier reason>". |
+| S8-20 | Send back with a new clip | Reject it again; as the Artist edit it, choose a new clip (30 seconds or less) and send back. Approve as admin. | The track goes live with the new clip. |
+| S8-21 | New clip too long | While editing, choose a clip longer than 30 seconds. | A message says the clip is too long; it cannot be sent. |
+| S8-22 | Only rejected tracks | Open the edit address of a track that is live or in review. | A message says it cannot be edited; no form. |
+| S8-23 | Only your own | As another Artist, open the edit address of the first Artist's rejected track. | "This track is not yours to edit." |

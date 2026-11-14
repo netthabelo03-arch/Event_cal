@@ -60,3 +60,27 @@ test('tracks are locked down in the database script', () => {
   assert.match(sql, /grant update \(status, reject_reason, reviewed_at\) on public\.tracks to authenticated;/);
   assert.doesNotMatch(sql, /grant insert \([^)]*play_count/);
 });
+
+test('editing a track that was not approved keeps its clip unless a new one is chosen', () => {
+  const kept = { title: 'Sunrise', genre: 'amapiano', about: '', clipFile: null, clipSeconds: null };
+  assert.equal(checkTrack(kept).ok, false, 'a new track needs a clip');
+  assert.deepEqual(checkTrack(kept, { clipOptional: true }), { ok: true, errors: {} });
+  assert.ok(checkTrack({ ...kept, clipFile: clip, clipSeconds: 31 }, { clipOptional: true }).errors.clip, 'a new clip is still checked');
+  assert.ok(checkTrack({ ...kept, title: '' }, { clipOptional: true }).errors.title);
+});
+
+test('the edit screen has its own address and needs a signed-in person', () => {
+  assert.deepEqual(parseRoute(`#/edit-track/${ID}`), { screen: 'edit-track', id: ID });
+  assert.equal(hashFor({ screen: 'edit-track', id: ID }), `#/edit-track/${ID}`);
+  assert.deepEqual(parseRoute('#/edit-track/nope'), { screen: 'discover' });
+  assert.deepEqual(resolveRoute({ screen: 'edit-track', id: ID }, false), { screen: 'signin' });
+});
+
+test('sending a track back is locked down in the database script', () => {
+  const resubmit = readFileSync(new URL('../supabase/010_track_resubmit.sql', import.meta.url), 'utf8');
+  assert.match(resubmit, /security definer\s+set search_path = ''/);
+  assert.match(resubmit, /t\.artist_id <> caller/);
+  assert.match(resubmit, /t\.status <> 'rejected'/);
+  assert.match(resubmit, /status = 'in_review'/);
+  assert.match(resubmit, /from public, anon;/);
+});

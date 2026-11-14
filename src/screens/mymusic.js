@@ -19,6 +19,10 @@ function trackRow(track) {
   if (track.status === 'rejected' && track.reject_reason) {
     lines.push(el('span', { class: 'event-row__meta', text: `Reason: ${track.reject_reason}` }));
   }
+  if (track.status === 'rejected') {
+    // Fix what was asked for and send it back to the review queue.
+    lines.push(el('a', { href: `#/edit-track/${track.id}`, class: 'button button--quiet button--small event-row__scan', text: 'Edit and send back' }));
+  }
   if (track.status === 'live') {
     lines.push(el('span', { class: 'event-row__meta', text: playsLabel(track.play_count) }));
     const view = linkTo(`#/track/${track.id}`, 'View track');

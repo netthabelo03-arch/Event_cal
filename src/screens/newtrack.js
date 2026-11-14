@@ -1,10 +1,12 @@
 // Post your music: an artist uploads a clip of at most 30 seconds and names
 // the track. It then waits for an admin to approve it.
+// The same form, opened with a track's id, edits a track that was not
+// approved and sends it back for review.
 
 import { MAX_CLIP_SECONDS } from '../rules/clip.js';
 import { CLIP_TYPES, checkClip } from '../events/rules.js';
 import { GENRES, checkTrack } from '../music/rules.js';
-import { createTrack } from '../music/api.js';
+import { createTrack, getTrack, resubmitTrack } from '../music/api.js';
 import { friendlyAuthError } from '../auth/errors.js';
 import { loadViewer } from '../viewer.js';
 import { topBar } from '../usermenu.js';
@@ -42,7 +44,7 @@ function errorLine() {
   };
 }
 
-export async function renderNewTrack({ session }) {
+export async function renderNewTrack({ session, id }) {
   const { profile, admin } = await loadViewer(session);
   const back = linkTo('#/my-music', 'Back to my music');
   back.className = 'text-link';
@@ -54,16 +56,36 @@ export async function renderNewTrack({ session }) {
       el('p', { class: 'link-row' }, [linkTo('#/profile', 'Switch to Artist in your profile')])];
   }
 
+  // Editing: only the artist's own track, and only while it is not approved.
+  let editing = null;
+  if (id) {
+    try {
+      editing = await getTrack(id);
+    } catch (error) {
+      return [bar, back, heading, el('p', { class: 'message message--error', role: 'alert', text: friendlyAuthError(error) })];
+    }
+    if (!editing || editing.artist_id !== session.user.id) {
+      return [bar, back, heading, el('p', { class: 'notice', text: 'This track is not yours to edit.' })];
+    }
+    if (editing.status !== 'rejected') {
+      return [bar, back, heading, el('p', { class: 'notice', text: editing.status === 'live' ? 'This track is live. Only tracks that were not approved can be edited.' : 'This track is already waiting for review.' })];
+    }
+    heading.textContent = 'Edit and send back';
+  }
+
   let clipFile = null;
   let clipSeconds = null;
   const clipInput = el('input', { id: 'clip', type: 'file', accept: Object.keys(CLIP_TYPES).join(','), class: 'file-input' });
-  const clipStatus = el('p', { class: 'field__hint', text: 'A video of you performing, or your track over a picture or visual. Put the best part first.' });
+  const clipStatus = el('p', { class: 'field__hint', text: editing ? 'Your current clip is kept unless you choose a new one.' : 'A video of you performing, or your track over a picture or visual. Put the best part first.' });
   const clipError = errorLine();
   clipInput.addEventListener('change', async () => {
     clipFile = clipInput.files[0] ?? null;
     clipSeconds = null;
     clipError.set(null);
-    if (!clipFile) return;
+    if (!clipFile) {
+      if (editing) clipStatus.textContent = 'Your current clip is kept unless you choose a new one.';
+      return;
+    }
     clipStatus.textContent = 'Checking the clip…';
     clipSeconds = await readDuration(clipFile);
     const problem = checkClip(clipFile, clipSeconds);
@@ -88,16 +110,23 @@ export async function renderNewTrack({ session }) {
 
   const about = el('textarea', { id: 'about', class: 'input input--area', rows: '3' });
   const aboutError = errorLine();
+  if (editing) {
+    title.input.value = editing.title;
+    about.value = editing.about ?? '';
+    genre = editing.genre;
+    genreButtons.forEach((button, index) => button.setAttribute('aria-pressed', String(GENRES[index].id === genre)));
+  }
   const nameNote = profile.full_name
     ? el('p', { class: 'field__hint', text: `It will show as by ${profile.full_name}. Change your name in your profile.` })
     : el('p', { class: 'notice' }, ['Add your artist name in ', linkTo('#/profile', 'your profile'), ' first, so people know who made this.']);
 
   const message = messageBox();
-  const submit = el('button', { type: 'submit', class: 'button button--primary', text: 'Submit for review' });
+  const submit = el('button', { type: 'submit', class: 'button button--primary', text: editing ? 'Send back for review' : 'Submit for review' });
 
   const form = el('form', { class: 'form', novalidate: '' }, [
+    ...(editing ? [el('p', { class: 'message message--error', text: editing.reject_reason ? `Not approved: ${editing.reject_reason}` : 'This track was not approved.' })] : []),
     el('div', { class: 'field' }, [
-      el('label', { for: 'clip', class: 'field__label', text: `Music clip (a video of at most ${MAX_CLIP_SECONDS} seconds)` }),
+      el('label', { for: 'clip', class: 'field__label', text: editing ? `New clip (optional, at most ${MAX_CLIP_SECONDS} seconds)` : `Music clip (a video of at most ${MAX_CLIP_SECONDS} seconds)` }),
       clipInput, clipStatus, clipError.node,
     ]),
     title.node,
@@ -119,7 +148,7 @@ export async function renderNewTrack({ session }) {
     event.preventDefault();
     message.clear();
     const values = { title: title.input.value, genre, about: about.value, clipFile, clipSeconds };
-    const { ok, errors } = checkTrack(values);
+    const { ok, errors } = checkTrack(values, { clipOptional: editing !== null });
     clipError.set(errors.clip ?? null);
     title.setError(errors.title ?? null);
     genreError.set(errors.genre ?? null);
@@ -128,10 +157,11 @@ export async function renderNewTrack({ session }) {
       message.show('Fix the highlighted fields and try again.');
       return;
     }
-    await whileBusy(submit, 'Uploading your clip…', async () => {
+    await whileBusy(submit, clipFile ? 'Uploading your clip…' : 'Sending…', async () => {
       try {
-        await createTrack(session.user.id, profile.full_name, values);
-        heading.textContent = 'Your music is submitted';
+        if (editing) await resubmitTrack(session.user.id, editing.id, values);
+        else await createTrack(session.user.id, profile.full_name, values);
+        heading.textContent = editing ? 'Your music is sent back for review' : 'Your music is submitted';
         form.replaceWith(
           el('div', { class: 'stack' }, [
             el('p', { class: 'lead', text: 'We will check the clip, then it goes live under New music on Discover. You can follow its status in My music.' }),

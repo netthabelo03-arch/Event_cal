@@ -19,7 +19,7 @@ const ITEM_ID = /^[a-z0-9][a-z0-9-]{0,63}$/;
 const ORDER_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 /** Screens that only a signed-in person may open. */
-export const PROTECTED_SCREENS = ['detail', 'profile', 'new-password', 'my-events', 'new-event', 'review', 'reminders', 'tickets', 'order', 'scan', 'my-music', 'new-track'];
+export const PROTECTED_SCREENS = ['detail', 'profile', 'new-password', 'my-events', 'new-event', 'review', 'reminders', 'tickets', 'order', 'scan', 'my-music', 'new-track', 'edit-track'];
 
 /** Screens that make no sense once signed in. */
 export const GUEST_SCREENS = ['signup', 'signin', 'forgot'];
@@ -44,6 +44,9 @@ export function parseRoute(hash) {
   }
   if (parts.length === 2 && parts[0] === 'order' && ORDER_ID.test(parts[1])) {
     return { screen: 'order', id: parts[1] };
+  }
+  if (parts.length === 2 && parts[0] === 'edit-track' && ORDER_ID.test(parts[1])) {
+    return { screen: 'edit-track', id: parts[1] };
   }
   if (parts.length === 2 && parts[0] === 'scan' && ORDER_ID.test(parts[1])) {
     return { screen: 'scan', id: parts[1] };
@@ -72,6 +75,7 @@ export function hashFor(route) {
   if (route.screen === 'detail') return `#/${route.kind}/${route.id}`;
   if (route.screen === 'order') return `#/order/${route.id}`;
   if (route.screen === 'scan') return `#/scan/${route.id}`;
+  if (route.screen === 'edit-track') return `#/edit-track/${route.id}`;
   return `#/${route.screen}`;
 }
 

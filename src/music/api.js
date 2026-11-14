@@ -92,3 +92,28 @@ export async function recordPlay(trackId) {
   const { error } = await client.rpc('record_play', { p_track_id: trackId });
   if (error) throw error;
 }
+
+/**
+ * Save an artist's changes to a track that was not approved and send it back
+ * for review. A new clip is uploaded only if one was chosen.
+ */
+export async function resubmitTrack(userId, trackId, form) {
+  const client = await getClient();
+  let path = null;
+  let seconds = null;
+  if (form.clipFile) {
+    path = clipPath(userId, form.clipFile.type, crypto.randomUUID());
+    const upload = await client.storage.from(BUCKET).upload(path, form.clipFile, { contentType: form.clipFile.type, upsert: false });
+    if (upload.error) throw upload.error;
+    seconds = Math.round(form.clipSeconds * 10) / 10;
+  }
+  const { error } = await client.rpc('resubmit_track', {
+    p_track_id: trackId,
+    p_title: form.title.trim(),
+    p_genre: form.genre,
+    p_about: String(form.about ?? '').trim(),
+    p_clip_path: path,
+    p_clip_seconds: seconds,
+  });
+  if (error) throw error;
+}

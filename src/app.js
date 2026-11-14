@@ -44,6 +44,7 @@ const SCREENS = {
   scan: renderScan,
   'my-music': renderMyMusic,
   'new-track': renderNewTrack,
+  'edit-track': renderNewTrack,
 };
 
 const root = document.getElementById('app');

@@ -35,11 +35,13 @@ export function checkAbout(value) {
 
 /**
  * Check everything on the "Post your music" form.
+ * @param {{ clipOptional?: boolean }} [options] clipOptional: no new clip is needed (editing)
  * @returns {{ ok: boolean, errors: { clip?: string, title?: string, genre?: string, about?: string } }}
  */
-export function checkTrack({ title, genre, about, clipFile, clipSeconds }) {
+export function checkTrack({ title, genre, about, clipFile, clipSeconds }, { clipOptional = false } = {}) {
   const errors = {};
-  const clip = checkClip(clipFile ?? null, clipSeconds ?? null);
+  // When editing a track that was not approved, the artist may keep the clip it has.
+  const clip = clipOptional && !clipFile ? null : checkClip(clipFile ?? null, clipSeconds ?? null);
   if (clip) errors.clip = clip.replace('of your event', 'of your music');
   const titleError = checkTrackTitle(title);
   if (titleError) errors.title = titleError;

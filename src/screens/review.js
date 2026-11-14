@@ -18,7 +18,8 @@ import { el, linkTo, whileBusy } from '../dom.js';
 function trackAsItem(track) {
   return {
     ...track,
-    lines: [genreName(track.genre), `Posted by ${track.artist_name || 'an artist with no name yet'}`],
+    // A track sent back after being rejected still carries the earlier reason.
+    lines: [genreName(track.genre), `Posted by ${track.artist_name || 'an artist with no name yet'}`, ...(track.reject_reason ? [`Sent back after: ${track.reject_reason}`] : [])],
     text: track.about || 'No description.',
     who: 'artist',
     decide: (choice) => reviewTrack(track.id, choice),
