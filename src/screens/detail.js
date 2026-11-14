@@ -13,7 +13,8 @@ import { MAX_CLIP_SECONDS } from '../rules/clip.js';
 import { CATEGORIES, formatWhen, isEventId, statusOf } from '../events/rules.js';
 import { friendlyAuthError } from '../auth/errors.js';
 import { findSample, initials } from '../sample.js';
-import { getTrack, listArtistTracks, recordPlay } from '../music/api.js';
+import { getTrack, listArtistTracks, recordPlay, audioUrl } from '../music/api.js';
+import { trackPlayer } from '../music/player.js';
 import { trackCard } from '../music/cards.js';
 import { genreName, playsLabel } from '../music/rules.js';
 import { loadViewer } from '../viewer.js';
@@ -196,15 +197,30 @@ async function realTrack(id, viewerId) {
   if (track === null) {
     return [el('h1', { class: 'title', text: 'Not found' }), el('p', { class: 'lead', text: 'This track is no longer available.' })];
   }
-  const video = el('video', { class: 'clip', controls: '', preload: 'auto', playsinline: '' });
-  video.src = await clipUrl(track.clip_path);
-  // Never play past the 30-second limit, even if a longer clip got through.
-  video.addEventListener('timeupdate', () => {
-    if (video.currentTime >= MAX_CLIP_SECONDS) video.pause();
-  });
-  setTimeout(() => autoplayFull(video), 0);
+  let media;
+  if (track.audio_path) {
+    // The track itself plays; its short video loops silently behind it.
+    const player = trackPlayer({
+      audioSrc: await audioUrl(track.audio_path),
+      videoSrc: await clipUrl(track.clip_path),
+      title: track.title,
+      seconds: track.audio_seconds,
+    });
+    media = player.node;
+    setTimeout(() => player.start(), 0);
+  } else {
+    // No audio uploaded: the clip plays with its own sound, as an event's does.
+    const video = el('video', { class: 'clip', controls: '', preload: 'auto', playsinline: '' });
+    video.src = await clipUrl(track.clip_path);
+    // Never play past the 30-second limit, even if a longer clip got through.
+    video.addEventListener('timeupdate', () => {
+      if (video.currentTime >= MAX_CLIP_SECONDS) video.pause();
+    });
+    setTimeout(() => autoplayFull(video), 0);
+    media = video;
+  }
 
-  const parts = [video];
+  const parts = [media];
   if (track.status !== 'live') {
     const status = statusOf(track.status);
     parts.push(el('span', { class: `chip chip--${status.tone}`, text: track.artist_id === viewerId ? `${status.label} — only you can see this` : status.label }));

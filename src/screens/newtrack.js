@@ -5,17 +5,17 @@
 
 import { MAX_CLIP_SECONDS } from '../rules/clip.js';
 import { CLIP_TYPES, checkClip } from '../events/rules.js';
-import { GENRES, checkTrack } from '../music/rules.js';
+import { GENRES, AUDIO_TYPES, checkTrack, checkAudio, formatTime } from '../music/rules.js';
 import { createTrack, getTrack, resubmitTrack } from '../music/api.js';
 import { friendlyAuthError } from '../auth/errors.js';
 import { loadViewer } from '../viewer.js';
 import { topBar } from '../usermenu.js';
 import { el, field, messageBox, linkTo, whileBusy } from '../dom.js';
 
-/** Ask the browser how long a video file is. Resolves to null if it cannot tell. */
-function readDuration(file) {
+/** Ask the browser how long a video or audio file is. Resolves to null if it cannot tell. */
+function readDuration(file, kind = 'video') {
   return new Promise((resolve) => {
-    const video = document.createElement('video');
+    const video = document.createElement(kind);
     const url = URL.createObjectURL(file);
     let settled = false;
     const finish = (seconds) => {
@@ -76,7 +76,7 @@ export async function renderNewTrack({ session, id }) {
   let clipFile = null;
   let clipSeconds = null;
   const clipInput = el('input', { id: 'clip', type: 'file', accept: Object.keys(CLIP_TYPES).join(','), class: 'file-input' });
-  const clipStatus = el('p', { class: 'field__hint', text: editing ? 'Your current clip is kept unless you choose a new one.' : 'A video of you performing, or your track over a picture or visual. Put the best part first.' });
+  const clipStatus = el('p', { class: 'field__hint', text: editing ? 'Your current clip is kept unless you choose a new one.' : 'A short video of you performing, or a visual for the track. It previews on Discover and loops behind your track while it plays.' });
   const clipError = errorLine();
   clipInput.addEventListener('change', async () => {
     clipFile = clipInput.files[0] ?? null;
@@ -93,6 +93,29 @@ export async function renderNewTrack({ session, id }) {
     clipStatus.textContent = problem
       ? clipFile.name
       : `${clipFile.name} · ${Math.round(clipSeconds)}s, within the ${MAX_CLIP_SECONDS}s limit`;
+  });
+
+  // The track itself (audio). Optional: without it the clip plays with its own sound.
+  let audioFile = null;
+  let audioSeconds = null;
+  const keptAudio = editing?.audio_path ? 'Your current audio is kept unless you choose a new file.' : null;
+  const audioHint = 'MP3 or M4A, up to 10 minutes and 20 MB. While it plays, your video loops silently behind it.';
+  const audioInput = el('input', { id: 'audio', type: 'file', accept: [...Object.keys(AUDIO_TYPES), '.mp3', '.m4a'].join(','), class: 'file-input' });
+  const audioStatus = el('p', { class: 'field__hint', text: keptAudio ?? audioHint });
+  const audioError = errorLine();
+  audioInput.addEventListener('change', async () => {
+    audioFile = audioInput.files[0] ?? null;
+    audioSeconds = null;
+    audioError.set(null);
+    if (!audioFile) {
+      audioStatus.textContent = keptAudio ?? audioHint;
+      return;
+    }
+    audioStatus.textContent = 'Checking the audio…';
+    audioSeconds = await readDuration(audioFile, 'audio');
+    const problem = checkAudio(audioFile, audioSeconds);
+    audioError.set(problem);
+    audioStatus.textContent = problem ? audioFile.name : `${audioFile.name} · ${formatTime(audioSeconds)}`;
   });
 
   const title = field({ id: 'title', label: 'Track name' });
@@ -126,8 +149,12 @@ export async function renderNewTrack({ session, id }) {
   const form = el('form', { class: 'form', novalidate: '' }, [
     ...(editing ? [el('p', { class: 'message message--error', text: editing.reject_reason ? `Not approved: ${editing.reject_reason}` : 'This track was not approved.' })] : []),
     el('div', { class: 'field' }, [
-      el('label', { for: 'clip', class: 'field__label', text: editing ? `New clip (optional, at most ${MAX_CLIP_SECONDS} seconds)` : `Music clip (a video of at most ${MAX_CLIP_SECONDS} seconds)` }),
+      el('label', { for: 'clip', class: 'field__label', text: editing ? `New video (optional, at most ${MAX_CLIP_SECONDS} seconds)` : `Short video (at most ${MAX_CLIP_SECONDS} seconds)` }),
       clipInput, clipStatus, clipError.node,
+    ]),
+    el('div', { class: 'field' }, [
+      el('label', { for: 'audio', class: 'field__label', text: 'Your track (audio, optional)' }),
+      audioInput, audioStatus, audioError.node,
     ]),
     title.node,
     nameNote,
@@ -147,12 +174,13 @@ export async function renderNewTrack({ session, id }) {
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     message.clear();
-    const values = { title: title.input.value, genre, about: about.value, clipFile, clipSeconds };
+    const values = { title: title.input.value, genre, about: about.value, clipFile, clipSeconds, audioFile, audioSeconds };
     const { ok, errors } = checkTrack(values, { clipOptional: editing !== null });
     clipError.set(errors.clip ?? null);
     title.setError(errors.title ?? null);
     genreError.set(errors.genre ?? null);
     aboutError.set(errors.about ?? null);
+    audioError.set(errors.audio ?? null);
     if (!ok) {
       message.show('Fix the highlighted fields and try again.');
       return;
@@ -162,7 +190,7 @@ export async function renderNewTrack({ session, id }) {
       message.show('Add your artist name in your profile first, so people can see who made this track.');
       return;
     }
-    await whileBusy(submit, clipFile ? 'Uploading your clip…' : 'Sending…', async () => {
+    await whileBusy(submit, clipFile || audioFile ? 'Uploading…' : 'Sending…', async () => {
       try {
         if (editing) await resubmitTrack(session.user.id, editing.id, values);
         else await createTrack(session.user.id, profile.full_name, values);

@@ -30,3 +30,12 @@ Before testing, run `supabase/009_tracks.sql` (README, "Music (Sprint 8)"). You 
 | S8-24 | Name needed to post | As an Artist with no name in the profile, fill in the form and submit. | A message asks for the artist name first; nothing is sent. |
 | S8-25 | Name shows to others (D-007) | Save a name in the profile, post a track, approve it. As a Goer open Discover, the track page and the artist page. | All three show the artist's name. |
 | S8-26 | Name change follows | As the Artist change the name in the profile. As a Goer reload Discover. | The track and the artist show the new name. |
+| S8-27 | Post a track with audio | As the Artist, Post your music: choose a short video, then under "Your track (audio, optional)" choose an MP3 or M4A. Add a name and genre, submit. | The audio line shows the file name and its length (for example 3:07). The track is submitted; My music shows "audio 3:07 with video". |
+| S8-28 | Wrong audio file | Choose a WAV file, or a file over 20 MB or over 10 minutes, as the audio. | A message says what is wrong; the track cannot be submitted. |
+| S8-29 | Admin hears it | As the admin, open Review queue. | The track's card has the video and, under "The track (audio)", an audio player with the actual length. Approve it. |
+| S8-30 | Player | As a Goer, open the track from Discover. | A player shows the video with a round play button, a progress bar and times. The track starts (or waits for one tap on Play). The video has no sound and no controls of its own. |
+| S8-31 | Video loops | Let the track play longer than the video. | The video starts again from its beginning, over and over, while the music carries on without a break. |
+| S8-32 | Pause and jump | Tap the button; drag the progress bar. | The music and the video stop together and start together; the music jumps to where the bar was dragged. |
+| S8-33 | End and leave | Let the track finish; play again and go back to Discover. | At the end the video stops and the button shows Play. Leaving the page stops the music. |
+| S8-34 | Track without audio | Open a track posted with a video only. | The video plays with its own sound and normal controls, as before. |
+| S8-35 | Add audio when sending back | Edit a rejected track and choose an audio file. | It is sent back with the new audio; without choosing one, the audio it had is kept. |

@@ -2,8 +2,8 @@
 // the event. Approved events go live in Discover.
 
 import { listReviewQueue, reviewEvent, clipUrl } from '../events/api.js';
-import { listTrackQueue, reviewTrack } from '../music/api.js';
-import { genreName } from '../music/rules.js';
+import { listTrackQueue, reviewTrack, audioUrl } from '../music/api.js';
+import { genreName, formatTime, MAX_AUDIO_SECONDS } from '../music/rules.js';
 import { CATEGORIES, formatWhen } from '../events/rules.js';
 import { MAX_CLIP_SECONDS } from '../rules/clip.js';
 import { friendlyAuthError } from '../auth/errors.js';
@@ -51,6 +51,21 @@ async function reviewCard(event, onDone) {
     length.className = over ? 'field__error' : 'event-row__meta';
   });
 
+  // A track with audio: the admin listens to the whole thing here.
+  const audioParts = [];
+  if (event.audio_path) {
+    const audio = el('audio', { class: 'review-card__audio', controls: '', preload: 'metadata' });
+    audio.src = await audioUrl(event.audio_path);
+    const audioLength = el('span', { class: 'event-row__meta', text: `Audio, reported length: ${formatTime(event.audio_seconds)}` });
+    audio.addEventListener('loadedmetadata', () => {
+      if (!Number.isFinite(audio.duration)) return;
+      const over = audio.duration > MAX_AUDIO_SECONDS + 1;
+      audioLength.textContent = `Audio, actual length: ${formatTime(audio.duration)}${over ? ' — over the 10-minute limit' : ''}`;
+      audioLength.className = over ? 'field__error' : 'event-row__meta';
+    });
+    audioParts.push(el('span', { class: 'field__label', text: 'The track (audio)' }), audio, audioLength);
+  }
+
   const reason = el('input', { id: `reason-${event.id}`, type: 'text', class: 'input', maxlength: '300' });
   const error = el('p', { class: 'field__error', role: 'alert' });
   error.hidden = true;
@@ -62,6 +77,7 @@ async function reviewCard(event, onDone) {
     el('span', { class: 'event-row__title', text: event.title }),
     ...event.lines.map((line) => el('span', { class: 'event-row__meta', text: line })),
     length,
+    ...audioParts,
     el('p', { class: 'review-card__text', text: event.text }),
     el('div', { class: 'field' }, [
       el('label', { for: reason.id, class: 'field__label', text: `Reason, if rejecting (the ${event.who} sees this)` }),

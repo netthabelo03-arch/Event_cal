@@ -93,3 +93,29 @@ test('names on tracks and events follow the profile (D-007)', () => {
   assert.match(names, /update public\.tracks t set artist_name/);
   assert.equal((names.match(/security definer\s+set search_path = ''/g) ?? []).length, 3);
 });
+
+test('track audio is optional but checked when chosen', async () => {
+  const { checkAudio, audioPath, formatTime, AUDIO_TYPES, MAX_AUDIO_SECONDS, MAX_AUDIO_BYTES } = await import('../src/music/rules.js');
+  const mp3 = { type: 'audio/mpeg', size: 4_000_000 };
+  assert.equal(checkAudio(null, null), null, 'no audio is fine');
+  assert.equal(checkAudio(mp3, 187), null);
+  assert.equal(checkAudio({ type: 'audio/wav', size: 10 }, 10), 'Use an MP3 or M4A audio file.');
+  assert.match(checkAudio({ type: 'audio/mpeg', size: MAX_AUDIO_BYTES + 1 }, 10), /20 MB/);
+  assert.match(checkAudio(mp3, null), /could not be read/);
+  assert.match(checkAudio(mp3, MAX_AUDIO_SECONDS + 1), /10 minutes/);
+  assert.equal(checkAudio(mp3, MAX_AUDIO_SECONDS), null);
+  assert.equal(audioPath('u1', 'audio/x-m4a', 'abc'), 'u1/abc.m4a');
+  assert.equal(formatTime(187), '3:07');
+  assert.equal(formatTime(0), '0:00');
+  assert.equal(formatTime(undefined), '0:00');
+  const base = { title: 'Sunrise', genre: 'amapiano', about: '', clipFile: clip, clipSeconds: 20 };
+  assert.equal(checkTrack(base).ok, true);
+  assert.equal(checkTrack({ ...base, audioFile: mp3, audioSeconds: 187 }).ok, true);
+  assert.ok(checkTrack({ ...base, audioFile: mp3, audioSeconds: 700 }).errors.audio);
+  const audioSql = readFileSync(new URL('../supabase/012_track_audio.sql', import.meta.url), 'utf8');
+  assert.match(audioSql, new RegExp(`audio_seconds <= ${MAX_AUDIO_SECONDS}\\b`));
+  assert.match(audioSql, new RegExp(`'audio', 'audio', true, ${MAX_AUDIO_BYTES},`));
+  for (const type of Object.keys(AUDIO_TYPES)) assert.ok(audioSql.includes(`'${type}'`), type);
+  assert.match(audioSql, /audio_path like artist_id::text \|\| '\/%'/);
+  assert.match(audioSql, /bucket_id = 'audio'\s+and \(storage\.foldername\(name\)\)\[1\] = \(select auth\.uid\(\)\)::text/);
+});

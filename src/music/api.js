@@ -3,19 +3,39 @@
 
 import { getClient } from '../auth/client.js';
 import { clipPath } from '../events/rules.js';
+import { audioPath } from './rules.js';
 
 const BUCKET = 'clips';
-const COLUMNS = 'id, artist_id, artist_name, title, genre, about, clip_path, clip_seconds, status, reject_reason, created_at, play_count';
+const AUDIO_BUCKET = 'audio';
+const COLUMNS = 'id, artist_id, artist_name, title, genre, about, clip_path, clip_seconds, status, reject_reason, created_at, play_count, audio_path, audio_seconds';
 
-/** Upload the clip, then save the track for review. */
+/** The public address of a track's audio, for an <audio> element. */
+export async function audioUrl(path) {
+  const client = await getClient();
+  return client.storage.from(AUDIO_BUCKET).getPublicUrl(path).data.publicUrl;
+}
+
+/** Upload the chosen audio, if any. @returns {Promise<{ path: string | null, seconds: number | null }>} */
+async function uploadAudio(client, userId, form) {
+  if (!form.audioFile) return { path: null, seconds: null };
+  const path = audioPath(userId, form.audioFile.type, crypto.randomUUID());
+  const upload = await client.storage.from(AUDIO_BUCKET).upload(path, form.audioFile, { contentType: form.audioFile.type, upsert: false });
+  if (upload.error) throw upload.error;
+  return { path, seconds: Math.round(form.audioSeconds * 10) / 10 };
+}
+
+/** Upload the clip (and the audio, if chosen), then save the track for review. */
 export async function createTrack(userId, artistName, form) {
   const client = await getClient();
   const path = clipPath(userId, form.clipFile.type, crypto.randomUUID());
   const upload = await client.storage.from(BUCKET).upload(path, form.clipFile, { contentType: form.clipFile.type, upsert: false });
   if (upload.error) throw upload.error;
+  const audio = await uploadAudio(client, userId, form);
   const { data, error } = await client
     .from('tracks')
     .insert({
+      audio_path: audio.path,
+      audio_seconds: audio.seconds,
       artist_id: userId,
       artist_name: String(artistName ?? '').trim().slice(0, 80),
       title: form.title.trim(),
@@ -107,7 +127,10 @@ export async function resubmitTrack(userId, trackId, form) {
     if (upload.error) throw upload.error;
     seconds = Math.round(form.clipSeconds * 10) / 10;
   }
+  const audio = await uploadAudio(client, userId, form);
   const { error } = await client.rpc('resubmit_track', {
+    p_audio_path: audio.path,
+    p_audio_seconds: audio.seconds,
     p_track_id: trackId,
     p_title: form.title.trim(),
     p_genre: form.genre,

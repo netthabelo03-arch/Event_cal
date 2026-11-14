@@ -2,7 +2,7 @@
 // to posting a new one.
 
 import { listMyTracks } from '../music/api.js';
-import { genreName, playsLabel } from '../music/rules.js';
+import { genreName, playsLabel, formatTime } from '../music/rules.js';
 import { statusOf } from '../events/rules.js';
 import { friendlyAuthError } from '../auth/errors.js';
 import { loadViewer } from '../viewer.js';
@@ -13,7 +13,7 @@ function trackRow(track) {
   const status = statusOf(track.status);
   const lines = [
     el('span', { class: 'event-row__title', text: track.title }),
-    el('span', { class: 'event-row__meta', text: genreName(track.genre) }),
+    el('span', { class: 'event-row__meta', text: `${genreName(track.genre)} · ${track.audio_path ? `audio ${formatTime(track.audio_seconds)} with video` : 'video only'}` }),
     el('span', { class: `chip chip--${status.tone}`, text: track.status === 'live' ? 'Live in New music' : status.label }),
   ];
   if (track.status === 'rejected' && track.reject_reason) {

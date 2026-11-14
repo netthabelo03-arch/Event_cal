@@ -2,6 +2,41 @@
 
 import { checkClip } from '../events/rules.js';
 
+/** Longest track audio an artist may upload, in seconds (10 minutes). The database enforces the same. */
+export const MAX_AUDIO_SECONDS = 600;
+
+/** Largest audio file, in bytes (20 MB). The storage bucket enforces the same. */
+export const MAX_AUDIO_BYTES = 20 * 1024 * 1024;
+
+/** Audio files an artist can upload, and the ending each is saved with. */
+export const AUDIO_TYPES = { 'audio/mpeg': 'mp3', 'audio/mp4': 'm4a', 'audio/x-m4a': 'm4a', 'audio/aac': 'aac' };
+
+/**
+ * Check the chosen audio file. The audio is optional, so no file is fine.
+ * @param {{ type: string, size: number } | null} file
+ * @param {number | null} seconds the audio's length, or null if it could not be read
+ */
+export function checkAudio(file, seconds) {
+  if (!file) return null;
+  if (!Object.hasOwn(AUDIO_TYPES, file.type)) return 'Use an MP3 or M4A audio file.';
+  if (file.size > MAX_AUDIO_BYTES) return 'That file is larger than 20 MB. Choose a smaller file.';
+  if (seconds === null) return 'That audio file could not be read. Try another file.';
+  if (!(seconds > 0)) return 'That audio file could not be read. Try another file.';
+  if (seconds > MAX_AUDIO_SECONDS) return 'The track is longer than 10 minutes. Choose a shorter one.';
+  return null;
+}
+
+/** The storage path for new audio: the artist's own folder, a fresh name, the right ending. */
+export function audioPath(userId, fileType, uniqueId) {
+  return `${userId}/${uniqueId}.${AUDIO_TYPES[fileType]}`;
+}
+
+/** "3:07" for a number of seconds. */
+export function formatTime(seconds) {
+  const whole = Number.isFinite(seconds) && seconds > 0 ? Math.floor(seconds) : 0;
+  return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}`;
+}
+
 /** Genres an artist can choose. The database accepts exactly these ids. */
 export const GENRES = [
   { id: 'amapiano', name: 'Amapiano' },
@@ -36,9 +71,9 @@ export function checkAbout(value) {
 /**
  * Check everything on the "Post your music" form.
  * @param {{ clipOptional?: boolean }} [options] clipOptional: no new clip is needed (editing)
- * @returns {{ ok: boolean, errors: { clip?: string, title?: string, genre?: string, about?: string } }}
+ * @returns {{ ok: boolean, errors: { clip?: string, title?: string, genre?: string, about?: string, audio?: string } }}
  */
-export function checkTrack({ title, genre, about, clipFile, clipSeconds }, { clipOptional = false } = {}) {
+export function checkTrack({ title, genre, about, clipFile, clipSeconds, audioFile, audioSeconds }, { clipOptional = false } = {}) {
   const errors = {};
   // When editing a track that was not approved, the artist may keep the clip it has.
   const clip = clipOptional && !clipFile ? null : checkClip(clipFile ?? null, clipSeconds ?? null);
@@ -49,6 +84,8 @@ export function checkTrack({ title, genre, about, clipFile, clipSeconds }, { cli
   if (genreError) errors.genre = genreError;
   const aboutError = checkAbout(about);
   if (aboutError) errors.about = aboutError;
+  const audioError = checkAudio(audioFile ?? null, audioSeconds ?? null);
+  if (audioError) errors.audio = audioError;
   return { ok: Object.keys(errors).length === 0, errors };
 }
 
