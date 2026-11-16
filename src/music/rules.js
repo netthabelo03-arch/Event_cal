@@ -109,3 +109,28 @@ export function artistsFrom(tracks) {
   }
   return [...byId.values()].map((artist) => ({ ...artist, name: artist.name || 'An artist' })).sort((a, b) => b.count - a.count);
 }
+
+/**
+ * What plays after a track ends: another track by the same artist first, then
+ * one in the same genre, then the newest of the rest. Tracks already played in
+ * this visit are passed over until everything has been played once.
+ * @param {{ id: string, artist_id: string, genre: string }} current
+ * @param {{ id: string, artist_id: string, genre: string }[]} tracks live tracks, newest first
+ * @param {string[]} playedIds ids already played in this visit
+ * @returns the next track, or null if there is no other track
+ */
+export function nextTrack(current, tracks, playedIds = []) {
+  const others = tracks.filter((track) => track.id !== current.id);
+  if (others.length === 0) return null;
+  const played = new Set(playedIds);
+  const fresh = others.filter((track) => !played.has(track.id));
+  const pool = fresh.length > 0 ? fresh : others;
+  const rank = (track) => (track.artist_id === current.artist_id ? 0 : track.genre === current.genre ? 1 : 2);
+  // A stable sort keeps "newest first" inside each group.
+  return [...pool].sort((a, b) => rank(a) - rank(b))[0];
+}
+
+/** Add a track to the list of those played in this visit (newest last, at most 100). */
+export function notePlayed(playedIds, trackId) {
+  return [...playedIds.filter((id) => id !== trackId), trackId].slice(-100);
+}

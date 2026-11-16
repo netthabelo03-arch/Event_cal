@@ -119,3 +119,20 @@ test('track audio is optional but checked when chosen', async () => {
   assert.match(audioSql, /audio_path like artist_id::text \|\| '\/%'/);
   assert.match(audioSql, /bucket_id = 'audio'\s+and \(storage\.foldername\(name\)\)\[1\] = \(select auth\.uid\(\)\)::text/);
 });
+
+test('after a track ends: same artist first, then same genre, then the newest of the rest', async () => {
+  const { nextTrack, notePlayed } = await import('../src/music/rules.js');
+  const t = (id, artist, genre) => ({ id, artist_id: artist, genre });
+  const current = t('now', 'tich', 'amapiano');
+  // Newest first, as the app lists them.
+  const tracks = [t('other-new', 'zee', 'house'), t('same-genre', 'zee', 'amapiano'), current, t('tich-2', 'tich', 'house'), t('tich-1', 'tich', 'gospel')];
+  assert.equal(nextTrack(current, tracks).id, 'tich-2', 'the same artist comes first, newest of theirs');
+  assert.equal(nextTrack(current, tracks, ['tich-2']).id, 'tich-1');
+  assert.equal(nextTrack(current, tracks, ['tich-2', 'tich-1']).id, 'same-genre', 'then the same genre');
+  assert.equal(nextTrack(current, tracks, ['tich-2', 'tich-1', 'same-genre']).id, 'other-new', 'then the rest');
+  assert.equal(nextTrack(current, tracks, ['tich-2', 'tich-1', 'same-genre', 'other-new']).id, 'tich-2', 'all played: start again');
+  assert.equal(nextTrack(current, [current]), null, 'nothing else to play');
+  assert.equal(nextTrack(current, []), null);
+  assert.deepEqual(notePlayed(['a', 'b'], 'a'), ['b', 'a']);
+  assert.equal(notePlayed(Array.from({ length: 120 }, (_, i) => `t${i}`), 'new').length, 100);
+});

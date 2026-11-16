@@ -84,6 +84,8 @@ async function show() {
   document.body.classList.toggle('with-showcase', SHOWCASE_SCREENS.includes(route.screen));
   document.body.classList.toggle('wide', WIDE_SCREENS.includes(route.screen));
   document.body.classList.toggle('full', FULL_SCREENS.includes(route.screen));
+  // A track's page fills the phone's screen, as the feed does.
+  document.body.classList.toggle('track-page', route.screen === 'detail' && route.kind === 'track');
 
   // Screens that fetch data are slow; if the person moves on meanwhile,
   // only the newest screen may be drawn.

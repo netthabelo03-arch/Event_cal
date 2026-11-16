@@ -13,12 +13,12 @@ import { MAX_CLIP_SECONDS } from '../rules/clip.js';
 import { CATEGORIES, formatWhen, isEventId, statusOf } from '../events/rules.js';
 import { friendlyAuthError } from '../auth/errors.js';
 import { findSample, initials } from '../sample.js';
-import { getTrack, listArtistTracks, recordPlay, audioUrl } from '../music/api.js';
+import { getTrack, listArtistTracks, listLiveTracks, recordPlay, audioUrl } from '../music/api.js';
 import { trackPlayer } from '../music/player.js';
 import { reportPanel } from '../reports/panel.js';
 import { canReport } from '../reports/reports.js';
 import { trackCard } from '../music/cards.js';
-import { genreName, playsLabel } from '../music/rules.js';
+import { genreName, playsLabel, nextTrack, notePlayed } from '../music/rules.js';
 import { loadViewer } from '../viewer.js';
 import { topBar } from '../usermenu.js';
 import { el, linkTo, whileBusy } from '../dom.js';
@@ -191,6 +191,9 @@ function countPlay(trackId) {
   if (result.count) recordPlay(trackId).catch(() => {});
 }
 
+/** Tracks played in this visit, so the next one is something new. */
+const PLAYED_KEY = 'plusespot.played';
+
 /** A real track: its full clip, who made it and what it is. */
 async function realTrack(id, viewerId) {
   let track;
@@ -202,42 +205,59 @@ async function realTrack(id, viewerId) {
   if (track === null) {
     return [el('h1', { class: 'title', text: 'Not found' }), el('p', { class: 'lead', text: 'This track is no longer available.' })];
   }
-  let media;
-  if (track.audio_path) {
-    // The track itself plays; its short video loops silently behind it.
-    const player = trackPlayer({
-      audioSrc: await audioUrl(track.audio_path),
-      videoSrc: await clipUrl(track.clip_path),
-      title: track.title,
-      seconds: track.audio_seconds,
-    });
-    media = player.node;
-    setTimeout(() => player.start(), 0);
-  } else {
-    // No audio uploaded: the clip plays with its own sound, as an event's does.
-    const video = el('video', { class: 'clip', controls: '', preload: 'auto', playsinline: '' });
-    video.src = await clipUrl(track.clip_path);
-    // Never play past the 30-second limit, even if a longer clip got through.
-    video.addEventListener('timeupdate', () => {
-      if (video.currentTime >= MAX_CLIP_SECONDS) video.pause();
-    });
-    setTimeout(() => autoplayFull(video), 0);
-    media = video;
+  // What plays next: same artist first, then same genre, then the newest of the rest.
+  let played = [];
+  try {
+    played = JSON.parse(window.sessionStorage.getItem(PLAYED_KEY) ?? '[]');
+    if (!Array.isArray(played)) played = [];
+  } catch {
+    played = [];
+  }
+  played = notePlayed(played, track.id);
+  try {
+    window.sessionStorage.setItem(PLAYED_KEY, JSON.stringify(played));
+  } catch {
+    // Without storage a track may come round again sooner; that is acceptable.
+  }
+  let upNext = null;
+  if (track.status === 'live') {
+    try {
+      upNext = nextTrack(track, await listLiveTracks(50), played);
+    } catch {
+      upNext = null;
+    }
   }
 
-  const parts = [media];
+  // The same player for every track. With audio, the track plays and its short
+  // video loops silently behind it; without, the video plays with its own sound.
+  const player = trackPlayer({
+    audioSrc: track.audio_path ? await audioUrl(track.audio_path) : null,
+    videoSrc: await clipUrl(track.clip_path),
+    title: track.title,
+    seconds: track.audio_path ? track.audio_seconds : track.clip_seconds,
+    backHref: '#/',
+    info: [
+      el('p', { class: 'caption', text: `Track · ${genreName(track.genre)}` }),
+      el('h1', { class: 'player__title', text: track.title }),
+      el('p', { class: 'player__by' }, ['By ', linkTo(`#/artist/${track.artist_id}`, track.artist_name || 'an artist')]),
+    ],
+    next: upNext ? { label: upNext.title, go: () => { window.location.hash = `#/track/${upNext.id}`; } } : null,
+  });
+  setTimeout(() => player.start(), 0);
+
+  const parts = [player.node];
   if (track.status !== 'live') {
     const status = statusOf(track.status);
     parts.push(el('span', { class: `chip chip--${status.tone}`, text: track.artist_id === viewerId ? `${status.label} — only you can see this` : status.label }));
+  } else {
+    parts.push(el('p', { class: 'event-row__meta', text: playsLabel(track.play_count) }));
   }
-  parts.push(
-    el('div', { class: 'stack' }, [
-      el('p', { class: 'caption', text: `Track · ${genreName(track.genre)}` }),
-      el('h1', { class: 'title', text: track.title }),
-      el('p', { class: 'lead' }, ['By ', linkTo(`#/artist/${track.artist_id}`, track.artist_name || 'an artist')]),
-      ...(track.status === 'live' ? [el('p', { class: 'event-row__meta', text: playsLabel(track.play_count) })] : []),
-    ]),
-  );
+  if (upNext) {
+    parts.push(el('p', { class: 'up-next' }, [
+      el('span', { class: 'caption', text: 'Up next' }),
+      linkTo(`#/track/${upNext.id}`, `${upNext.title} · ${upNext.artist_name || 'An artist'}`),
+    ]));
+  }
   if (track.about) parts.push(el('p', { class: 'detail__text', text: track.about }));
   if (canReport(track, track.artist_id, viewerId)) parts.push(reportPanel('track', track.id));
   if (track.status === 'live' && track.artist_id !== viewerId) countPlay(track.id);
