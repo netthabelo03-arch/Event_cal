@@ -8,7 +8,7 @@
 const DISCOVER = { screen: 'discover' };
 
 /** Screens whose address is just their name, like "#/signin". */
-const NAMED_SCREENS = ['signup', 'signin', 'forgot', 'new-password', 'profile', 'my-events', 'new-event', 'review', 'feed', 'search', 'reminders', 'tickets', 'my-music', 'new-track'];
+const NAMED_SCREENS = ['signup', 'signin', 'forgot', 'new-password', 'profile', 'my-events', 'new-event', 'review', 'feed', 'search', 'reminders', 'tickets', 'my-music', 'new-track', 'terms', 'privacy'];
 
 /** The kinds of item that have a details screen. */
 export const ITEM_KINDS = ['event', 'host', 'artist', 'track'];

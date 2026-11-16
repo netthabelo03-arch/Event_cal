@@ -183,6 +183,15 @@ A host opens My events, taps **Boost this clip** under a live event and chooses 
 
 A person switches to **Artist** in their profile and opens **My music** from the menu. **Post your music** takes a video clip of at most 30 seconds, a track name and a genre. An admin approves it in the **Review queue** (under "Music"), and it then shows under **New music** on Discover, with the artist under **Artists**. Each track has its own page that plays the full clip and counts plays; each artist has a page listing their live tracks. Clips are kept in the same storage as event clips. An artist can also upload the track itself as audio (MP3 or M4A, up to 10 minutes and 20 MB, kept in the `audio` storage): its page then has a player where the audio plays and the short video loops silently behind it; without audio the video plays with its own sound. If an artist uploaded the wrong track, they tap **Wrong track? File a dispute** under it in My music and say what is wrong. They get a ticket number (for example PS-20261114-0042) and a promise of an answer within 24 hours (set in `dispute_turnaround_hours` in the database script and `TURNAROUND_HOURS` in `src/music/disputes.js`; keep the two the same). Admins see open disputes first in the Review queue and either take the track down, which lets the artist correct it and send it back, or keep it with a note. A track that is not approved shows the admin's reason in My music with **Edit and send back**: the artist changes the name, genre, description or clip and it returns to the review queue, where the admin sees the earlier reason.
 
+## Launch readiness (Sprint 9)
+
+1. **Database.** In Supabase, SQL Editor, paste `supabase/014_reports.sql` and Run.
+
+- **Reporting.** A signed-in person can tap **Report this event** or **Report this track** on anything live that is not their own, and choose a reason. Admins see reported items first-hand in the Review queue under **Reports** (one card per item, however many reports) and either **Dismiss** or **Take it down**.
+- **Legal pages.** `#/terms` and `#/privacy` are open to everyone and linked from Sign up and the foot of Discover. The wording in `src/screens/legal.js` is a **draft**: it must be reviewed by a lawyer and its [bracketed] details filled in before launch.
+- **Error states.** A bar shows while the device is offline; a screen that fails to load offers **Try again**; Discover says so when real events could not be fetched.
+- **Launch checklist.** `docs/launch-checklist.md` lists everything that must be done or decided before real users are invited.
+
 ## Opening the app
 
 The app must be opened through a web address, not by double-clicking `index.html`; browsers block this kind of JavaScript when a file is opened directly.

@@ -15,6 +15,8 @@ import { friendlyAuthError } from '../auth/errors.js';
 import { findSample, initials } from '../sample.js';
 import { getTrack, listArtistTracks, recordPlay, audioUrl } from '../music/api.js';
 import { trackPlayer } from '../music/player.js';
+import { reportPanel } from '../reports/panel.js';
+import { canReport } from '../reports/reports.js';
 import { trackCard } from '../music/cards.js';
 import { genreName, playsLabel } from '../music/rules.js';
 import { loadViewer } from '../viewer.js';
@@ -163,6 +165,9 @@ async function realEvent(id, viewerId, navigate) {
     if (tickets) parts.push(tickets);
     parts.push(await reminderBox(viewerId, event.id));
   }
+  if (canReport(event, event.host_id, viewerId)) {
+    parts.push(reportPanel('event', event.id));
+  }
   // Count the view, except the host's own visits and visits not yet live.
   if (event.status === 'live' && event.host_id !== viewerId) countView(event.id);
   return parts;
@@ -234,6 +239,7 @@ async function realTrack(id, viewerId) {
     ]),
   );
   if (track.about) parts.push(el('p', { class: 'detail__text', text: track.about }));
+  if (canReport(track, track.artist_id, viewerId)) parts.push(reportPanel('track', track.id));
   if (track.status === 'live' && track.artist_id !== viewerId) countPlay(track.id);
   return parts;
 }

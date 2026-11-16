@@ -23,6 +23,7 @@ import { renderOrder } from './screens/order.js';
 import { renderScan } from './screens/scan.js';
 import { renderMyMusic } from './screens/mymusic.js';
 import { renderNewTrack } from './screens/newtrack.js';
+import { renderTerms, renderPrivacy } from './screens/legal.js';
 import { forgetViewer } from './viewer.js';
 
 const SCREENS = {
@@ -45,6 +46,8 @@ const SCREENS = {
   'my-music': renderMyMusic,
   'new-track': renderNewTrack,
   'edit-track': renderNewTrack,
+  terms: renderTerms,
+  privacy: renderPrivacy,
 };
 
 const root = document.getElementById('app');
@@ -92,7 +95,16 @@ async function show() {
   try {
     content = await pending;
   } catch {
-    content = [brand(), el('p', { class: 'message message--error', role: 'alert', text: 'This screen could not be shown. Reload the page to try again.' })];
+    // Most often the connection dropped while the screen was loading.
+    const retry = el('button', { type: 'button', class: 'button button--primary', text: 'Try again' });
+    retry.addEventListener('click', show);
+    const home = el('a', { href: '#/', class: 'button button--quiet', text: 'Back to Discover' });
+    content = [
+      brand(),
+      el('h1', { class: 'title', text: 'This screen could not be shown' }),
+      el('p', { class: 'message message--error', role: 'alert', text: navigator.onLine === false ? 'You are offline. Connect to the internet and try again.' : 'Something went wrong while loading it. Check your connection and try again.' }),
+      el('div', { class: 'link-row' }, [retry, home]),
+    ];
   }
   if (thisRender !== latestRender) return;
 
@@ -165,7 +177,20 @@ async function start() {
     session = null;
   }
   window.addEventListener('hashchange', show);
+  watchConnection();
   show();
+}
+
+/**
+ * A bar across the top while the device is offline, so a screen that will not
+ * load is not a mystery. It goes by itself when the connection is back.
+ */
+function watchConnection() {
+  const bar = el('p', { class: 'offline-bar', role: 'status', text: 'You are offline. Some things will not load until you are back online.' });
+  bar.hidden = navigator.onLine !== false;
+  document.body.prepend(bar);
+  window.addEventListener('offline', () => { bar.hidden = false; });
+  window.addEventListener('online', () => { bar.hidden = true; });
 }
 
 start();
