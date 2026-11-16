@@ -177,36 +177,62 @@ export async function renderReview({ session }) {
 
   if (!admin) return [...head, el('p', { class: 'notice', text: 'This page is for admins only.' })];
 
-  let events;
-  let tracks;
-  let disputes;
-  try {
-    events = await listReviewQueue();
-    // Before the Sprint 8 database scripts are run these tables are not there yet.
-    tracks = await listTrackQueue().catch(() => []);
-    disputes = await listOpenDisputes().catch(() => []);
-  } catch (error) {
-    return [...head, el('p', { class: 'message message--error', role: 'alert', text: friendlyAuthError(error) })];
-  }
-
   const count = el('p', { class: 'lead', role: 'status' });
-  let waiting = events.length + tracks.length + disputes.length;
+  const body = el('div', { class: 'stack' });
+  let waiting = 0;
   const update = () => {
     count.textContent = waiting === 0 ? 'Nothing is waiting for review.' : `${waiting} ${waiting === 1 ? 'item is' : 'items are'} waiting.`;
   };
-  update();
-  const done = () => {
-    waiting -= 1;
-    update();
-  };
 
-  const eventCards = await Promise.all(events.map((event) => reviewCard(eventAsItem(event), done)));
-  const trackCards = await Promise.all(tracks.map((track) => reviewCard(trackAsItem(track), done)));
-  const disputeCards = await Promise.all(disputes.map((dispute) => disputeCard(dispute, done)));
-  const content = [...head, count];
-  // Disputes come first: each has a time by which the artist was promised an answer.
-  if (disputeCards.length > 0) content.push(el('h2', { class: 'section__title', text: 'Disputes' }), el('ul', { class: 'event-list' }, disputeCards));
-  if (eventCards.length > 0) content.push(el('h2', { class: 'section__title', text: 'Events' }), el('ul', { class: 'event-list' }, eventCards));
-  if (trackCards.length > 0) content.push(el('h2', { class: 'section__title', text: 'Music' }), el('ul', { class: 'event-list' }, trackCards));
-  return content;
+  /**
+   * Read what is waiting from the database and draw it. Run again after a
+   * dispute is actioned, so the dispute and everything about that track leave
+   * the screen at once (a track taken down while it was still in review also
+   * had a card under Music).
+   */
+  async function fill() {
+    const events = await listReviewQueue();
+    // Before the Sprint 8 database scripts are run these tables are not there yet.
+    const tracks = await listTrackQueue().catch(() => []);
+    const disputes = await listOpenDisputes().catch(() => []);
+    waiting = events.length + tracks.length + disputes.length;
+    update();
+
+    const parts = [];
+    // A section is its heading and its list; the heading goes when the last card does.
+    const section = async (title, items, makeCard) => {
+      if (items.length === 0) return;
+      const heading = el('h2', { class: 'section__title', text: title });
+      const list = el('ul', { class: 'event-list' });
+      let left = items.length;
+      const done = () => {
+        waiting = Math.max(0, waiting - 1);
+        update();
+        left -= 1;
+        if (left <= 0) {
+          heading.remove();
+          list.remove();
+        }
+      };
+      const cards = await Promise.all(items.map((item) => makeCard(item, done)));
+      list.append(...cards);
+      parts.push(heading, list);
+    };
+    // Disputes come first: each has a time by which the artist was promised an answer.
+    await section('Disputes', disputes, (dispute, done) => disputeCard(dispute, () => {
+      done();
+      // The database is now the truth: draw the queue again without this dispute.
+      fill().catch(() => {});
+    }));
+    await section('Events', events, (event, done) => reviewCard(eventAsItem(event), done));
+    await section('Music', tracks, (track, done) => reviewCard(trackAsItem(track), done));
+    body.replaceChildren(...parts);
+  }
+
+  try {
+    await fill();
+  } catch (error) {
+    return [...head, el('p', { class: 'message message--error', role: 'alert', text: friendlyAuthError(error) })];
+  }
+  return [...head, count, body];
 }
