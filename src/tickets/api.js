@@ -9,7 +9,10 @@ export async function listTicketTypes(eventId) {
   const client = await getClient();
   const { data, error } = await client.from('ticket_types').select(TYPE_COLUMNS).eq('event_id', eventId).order('position', { ascending: true });
   if (error) throw error;
-  return data;
+  // How many of each are held by other people's unfinished checkouts (D-009).
+  const { data: holds } = await client.rpc('ticket_holds', { p_event_id: eventId });
+  const heldBy = new Map((holds ?? []).map((row) => [row.ticket_type_id, row.held]));
+  return data.map((type) => ({ ...type, held: heldBy.get(type.id) ?? 0 }));
 }
 
 /** Save the ticket types a host set for their event. */

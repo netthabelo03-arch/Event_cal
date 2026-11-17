@@ -194,7 +194,7 @@ A person switches to **Artist** in their profile and opens **My music** from the
 
 ## Tickets: percentage sold and folders
 
-1. **Database.** In Supabase, SQL Editor, paste `supabase/015_sales_limit.sql` and Run.
+1. **Database.** In Supabase, SQL Editor, paste `supabase/015_sales_limit.sql` and Run, then `supabase/016_ticket_holds.sql`.
 2. **Function.** Deploy `send-reminders` again with its `index.ts` and `schedule.js`.
 
 - Each ticket type shows how much is sold as a percentage ("42% sold") with a bar. **Sales stop at 90%** of the tickets offered, and the type then shows "Sold out". The limit is set in `sellable_tickets` in the database script and `SELL_LIMIT` in `src/tickets/rules.js`; keep the two the same.

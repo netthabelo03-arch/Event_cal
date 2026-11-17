@@ -19,3 +19,6 @@ Before testing, run `supabase/015_sales_limit.sql` and deploy the updated `send-
 | TF-03 | Inside a folder | Open a folder. | Each ticket says "Ticket 1 of 2" with its type, QR code and code; used tickets say "Used at the door". A link opens the event. |
 | TF-04 | Straight to the right folder | Buy tickets and tap "See my tickets" on "You're going!". | My tickets opens with that event's folder open. |
 | TF-05 | Past events | Hold a ticket for an event that has finished. | Its folder is under "Past events", closed, without a QR code. |
+| PS-11 | Own abandoned checkout (D-009) | Choose the last ticket of an event, tap Buy, close the Paystack page without paying. Go back to the event and buy it again. | The ticket can be bought again straight away; the earlier unpaid order no longer blocks it. |
+| PS-12 | Held by someone else | As buyer A, start buying the last ticket and leave the Paystack page open. As buyer B, open the event. | B sees the percentage sold (not "Sold out") and, in yellow, "The last tickets are being paid for by other people…"; + does nothing. |
+| PS-13 | Hold runs out | Leave buyer A's payment unfinished for 30 minutes; buyer B reloads the event. | B can now buy the ticket. |

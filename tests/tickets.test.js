@@ -224,3 +224,23 @@ test('"See my tickets" opens that event\'s folder', async () => {
   assert.deepEqual(parseRoute('#/tickets'), { screen: 'tickets' });
   assert.deepEqual(resolveRoute({ screen: 'tickets', id }, false), { screen: 'signin' });
 });
+
+test('tickets held by other people\'s unfinished checkouts cannot be chosen (D-009)', async () => {
+  const { buyable, HELD_NOTE } = await import('../src/tickets/rules.js');
+  // Rambo: 7 offered, 6 can be sold, 5 sold, 1 held by someone paying right now.
+  const rambo = { id: 'r', price_cents: 10000, quantity: 7, sold: 5, held: 1 };
+  assert.equal(remaining(rambo), 1);
+  assert.equal(buyable(rambo), 0);
+  assert.equal(maxFor(rambo, {}), 0, 'the + button stays off');
+  assert.equal(availabilityLabel(rambo), '71% sold', 'it is not sold out');
+  assert.match(HELD_NOTE, /come back within 30 minutes/);
+  assert.equal(buyable({ ...rambo, held: 0 }), 1);
+  assert.equal(buyable({ ...rambo, held: undefined }), 1);
+  assert.match(checkoutErrorMessage('tickets_held'), /being paid for by other people/);
+  assert.match(checkoutErrorMessage('sold_out'), /not enough/);
+  const sql = readFileSync(new URL('../supabase/016_ticket_holds.sql', import.meta.url), 'utf8');
+  assert.match(sql, /update public\.orders o set status = 'failed'\s+where o\.buyer_id = buyer and o\.event_id = p_event_id and o\.status = 'pending';/);
+  assert.match(sql, /raise exception 'tickets_held'/);
+  assert.match(sql, /o\.buyer_id is distinct from auth\.uid\(\)/);
+  assert.ok(sql.indexOf("set status = 'failed'") < sql.indexOf('insert into public.orders'), 'own holds are let go before the new order is counted');
+});
