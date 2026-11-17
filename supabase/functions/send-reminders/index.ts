@@ -1,7 +1,8 @@
 // Edge Function: send-reminders.
 // Called every 5 minutes by pg_cron (see supabase/005_schedule_reminders.sql)
 // with the project's secret key. Sends the reminder email a day before each
-// event, and the phone notification two hours before.
+// event, and the phone notification two hours before. It also tells people who
+// set a reminder or hold a ticket when an event passes 50%, 75% and sold out.
 //
 // Secrets to set under Edge Functions, Secrets:
 //   RESEND_API_KEY     the email service's API key
@@ -13,7 +14,7 @@
 
 import { withSupabase } from 'npm:@supabase/server@^1';
 import webpush from 'npm:web-push@3.6.7';
-import { dueKinds, emailContent, pushPayload, EMAIL_BEFORE_MS } from './schedule.js';
+import { dueKinds, emailContent, pushPayload, EMAIL_BEFORE_MS, eventSales, salesMilestone, salesNotice, salesEmail } from './schedule.js';
 
 const env = (name) => Deno.env.get(name) ?? '';
 
@@ -87,6 +88,63 @@ export default {
               } else {
                 result.failures.push(`push ${row.event_id}: ${problem.statusCode ?? problem.message}`);
               }
+            }
+          }
+        }
+      }
+    }
+
+    // Sales notices: upcoming live events that sell tickets and have passed a new milestone.
+    result.salesNotices = 0;
+    if (pushReady || emailReady) {
+      const { data: events } = await db
+        .from('events')
+        .select('id, title, starts_at, venue, city, host_name, sales_notice_pct, ticket_types(quantity, sold)')
+        .eq('status', 'live')
+        .gt('starts_at', new Date(now).toISOString())
+        .lt('sales_notice_pct', 90)
+        .limit(500);
+      for (const event of events ?? []) {
+        const milestone = salesMilestone(eventSales(event.ticket_types));
+        if (milestone <= event.sales_notice_pct) continue;
+        // Claim it first, so two runs at once cannot both send it.
+        const { data: claimed } = await db.from('events').update({ sales_notice_pct: milestone })
+          .eq('id', event.id).lt('sales_notice_pct', milestone).select('id');
+        if (!claimed?.length) continue;
+
+        const [{ data: reminded }, { data: holders }] = await Promise.all([
+          db.from('reminders').select('user_id').eq('event_id', event.id),
+          db.from('tickets').select('owner_id').eq('event_id', event.id),
+        ]);
+        const ticketHolders = new Set((holders ?? []).map((row) => row.owner_id));
+        const people = new Set([...(reminded ?? []).map((row) => row.user_id), ...ticketHolders]);
+        for (const userId of people) {
+          const holds = ticketHolders.has(userId);
+          if (pushReady) {
+            const { data: devices } = await db.from('push_subscriptions').select('id, endpoint, p256dh, auth').eq('user_id', userId);
+            const payload = JSON.stringify(salesNotice(event, milestone, holds, env('APP_URL')));
+            for (const device of devices ?? []) {
+              try {
+                await webpush.sendNotification({ endpoint: device.endpoint, keys: { p256dh: device.p256dh, auth: device.auth } }, payload, { TTL: 6 * 3600 });
+                result.salesNotices += 1;
+              } catch (problem) {
+                if (problem.statusCode === 404 || problem.statusCode === 410) {
+                  await db.from('push_subscriptions').delete().eq('id', device.id);
+                } else {
+                  result.failures.push(`sales push ${event.id}: ${problem.statusCode ?? problem.message}`);
+                }
+              }
+            }
+          }
+          if (emailReady) {
+            try {
+              const { data: user } = await db.auth.admin.getUserById(userId);
+              if (user?.user?.email) {
+                await sendEmail(user.user.email, salesEmail(event, milestone, holds, env('APP_URL')));
+                result.salesNotices += 1;
+              }
+            } catch (problem) {
+              result.failures.push(`sales email ${event.id}: ${problem.message}`);
             }
           }
         }

@@ -2,7 +2,7 @@
 // the total, and the button that starts paying.
 
 import { listTicketTypes, startCheckout } from './api.js';
-import { formatRand, availabilityLabel, cartSummary, maxFor, buyLabel, checkoutErrorMessage, remaining } from './rules.js';
+import { formatRand, availabilityLabel, cartSummary, maxFor, buyLabel, checkoutErrorMessage, remaining, percentSold } from './rules.js';
 import { el, icon, whileBusy } from '../dom.js';
 
 const MINUS = '<path d="M5 12h14"></path>';
@@ -56,7 +56,10 @@ export async function ticketsBox(event, navigate) {
       el('span', { class: 'ticket-type__text' }, [
         el('span', { class: 'ticket-type__name', text: type.name }),
         el('span', { class: 'ticket-type__price', text: formatRand(type.price_cents) }),
-        ...(label ? [el('span', { class: 'event-row__meta', text: label })] : []),
+        el('span', { class: 'sold-meter', role: 'img', 'aria-label': label }, [
+          el('span', { class: 'sold-meter__fill', style: `width:${soldOut ? 100 : Math.round((percentSold(type) / 90) * 100)}%` }),
+        ]),
+        el('span', { class: `event-row__meta${soldOut ? ' sold-meter__label--out' : ''}`, text: label }),
       ]),
       el('span', { class: 'stepper' }, [minus, count, plus]),
     ]);

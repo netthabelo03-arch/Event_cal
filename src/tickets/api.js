@@ -71,7 +71,7 @@ export async function listMyTickets(userId) {
   const client = await getClient();
   const { data, error } = await client
     .from('tickets')
-    .select('id, code, checked_in_at, events(id, title, starts_at, venue, city, status), ticket_types(name)')
+    .select('id, code, checked_in_at, events(id, title, starts_at, venue, city, status, ticket_types(quantity, sold)), ticket_types(name)')
     .eq('owner_id', userId);
   if (error) throw error;
   return data.sort((a, b) => Date.parse(a.events.starts_at) - Date.parse(b.events.starts_at));

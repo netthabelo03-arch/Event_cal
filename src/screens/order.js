@@ -34,7 +34,7 @@ export async function renderOrder({ session, id }) {
     if (state === 'paid') {
       heading.textContent = "You're going!";
       status.textContent = 'Your tickets are ready.';
-      const tickets = el('a', { href: '#/tickets', class: 'button button--primary', text: 'See my tickets' });
+      const tickets = el('a', { href: `#/tickets/${order.event_id}`, class: 'button button--primary', text: 'See my tickets' });
       next.replaceChildren(tickets);
     } else if (state === 'failed') {
       heading.textContent = 'Payment not completed';

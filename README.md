@@ -192,6 +192,15 @@ A person switches to **Artist** in their profile and opens **My music** from the
 - **Error states.** A bar shows while the device is offline; a screen that fails to load offers **Try again**; Discover says so when real events could not be fetched.
 - **Launch checklist.** `docs/launch-checklist.md` lists everything that must be done or decided before real users are invited.
 
+## Tickets: percentage sold and folders
+
+1. **Database.** In Supabase, SQL Editor, paste `supabase/015_sales_limit.sql` and Run.
+2. **Function.** Deploy `send-reminders` again with its `index.ts` and `schedule.js`.
+
+- Each ticket type shows how much is sold as a percentage ("42% sold") with a bar. **Sales stop at 90%** of the tickets offered, and the type then shows "Sold out". The limit is set in `sellable_tickets` in the database script and `SELL_LIMIT` in `src/tickets/rules.js`; keep the two the same.
+- People who set a reminder for an event, or hold a ticket for it, get a phone notification (and an email, once email is set up) when its tickets pass **50%**, **75%** and **sold out**, once each. The reminders job sends these every 5 minutes.
+- **My tickets** has one folder per event with its tickets inside. "See my tickets" after buying opens that event's folder.
+
 ## Opening the app
 
 The app must be opened through a web address, not by double-clicking `index.html`; browsers block this kind of JavaScript when a file is opened directly.

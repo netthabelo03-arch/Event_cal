@@ -3,10 +3,17 @@
 import { listMyReminders, removeReminder } from '../reminders/api.js';
 import { phonePanel } from '../reminders/panel.js';
 import { formatWhen } from '../events/rules.js';
+import { eventSales, eventSalesLabel } from '../tickets/rules.js';
 import { friendlyAuthError } from '../auth/errors.js';
 import { loadViewer } from '../viewer.js';
 import { topBar } from '../usermenu.js';
 import { el, linkTo, whileBusy } from '../dom.js';
+
+function salesChip(types) {
+  const sales = eventSales(types);
+  if (!sales) return [];
+  return [el('span', { class: `chip chip--${sales.soldOut ? 'bad' : sales.percent >= 75 ? 'waiting' : 'good'}`, text: eventSalesLabel(sales) })];
+}
 
 function reminderRow(userId, event, onRemoved) {
   const open = linkTo(`#/event/${event.id}`, event.title);
@@ -19,6 +26,8 @@ function reminderRow(userId, event, onRemoved) {
     open,
     el('span', { class: 'event-row__meta', text: `${formatWhen(event.starts_at)} · ${event.venue}` }),
     ...(event.status !== 'live' ? [el('span', { class: 'chip chip--bad', text: 'No longer available' })] : []),
+    // How fast it is selling, so they can get a ticket before it sells out.
+    ...(salesChip(event.ticket_types)),
     ...(sent ? [el('span', { class: 'event-row__meta', text: sent })] : []),
     error,
     remove,

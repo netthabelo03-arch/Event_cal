@@ -11,6 +11,7 @@ Everything here must be done, or decided, before real users are invited. Tick ea
 | 3 | Turn "Verify JWT" off for `paystack-webhook` and set the webhook URL in Paystack (live) | Paystack must be able to tell the app a payment went through | You | ☐ |
 | 4 | Decide the refund policy and how Hosts are paid out; build payouts and refunds | Promised in the plan for Sprint 6, waiting for real payments | You, then Claude | ☐ |
 | 5 | Confirm the boost prices (now R50, R120, R250) | They are placeholders | You | ☐ |
+| 5a | Tell Hosts that sales stop at 90% of the tickets they offer | They may want to offer more tickets to sell the number they need | You | ☐ |
 | 6 | Make one real R5 purchase and one boost end to end, then refund them | Proves the live keys and the webhook | You | ☐ |
 
 ## Must do: reminders

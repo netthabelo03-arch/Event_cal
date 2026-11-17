@@ -60,17 +60,52 @@ export function checkTicketTypes(rows) {
   return { ok: errors.every((error) => error === null), errors, types };
 }
 
-/** How many of a ticket type are left. */
-export function remaining(type) {
-  return Math.max(0, type.quantity - type.sold);
+/**
+ * Sales stop once this share of a ticket type is sold. The database enforces
+ * the same limit (sellable_tickets in supabase/015_sales_limit.sql).
+ */
+export const SELL_LIMIT = 0.9;
+
+/** How many of a ticket type can be sold: 90% of those offered, rounded down, and at least one. */
+export function sellable(type) {
+  return Math.max(1, Math.floor(type.quantity * SELL_LIMIT));
 }
 
-/** "Sold out", "3 left" (when few are left), or "" when plenty are left. */
+/** How many of a ticket type are left to buy. */
+export function remaining(type) {
+  return Math.max(0, sellable(type) - type.sold);
+}
+
+/** The share of a ticket type that is sold, as a whole percentage. It stops at 90. */
+export function percentSold(type) {
+  if (!(type.quantity > 0)) return 0;
+  return Math.min(SELL_LIMIT * 100, Math.floor((type.sold / type.quantity) * 100));
+}
+
+/** "Sold out", or how much is sold, such as "45% sold". */
 export function availabilityLabel(type) {
-  const left = remaining(type);
-  if (left === 0) return 'Sold out';
-  if (left <= 20) return `${left} left`;
-  return '';
+  if (remaining(type) === 0) return 'Sold out';
+  return `${percentSold(type)}% sold`;
+}
+
+/**
+ * How much of a whole event is sold, over all its ticket types.
+ * @param {{ quantity: number, sold: number }[]} types
+ * @returns {{ percent: number, soldOut: boolean } | null} null when the event sells no tickets
+ */
+export function eventSales(types) {
+  const list = (types ?? []).filter((type) => type.quantity > 0);
+  if (list.length === 0) return null;
+  const soldOut = list.every((type) => remaining(type) === 0);
+  const offered = list.reduce((sum, type) => sum + type.quantity, 0);
+  const sold = list.reduce((sum, type) => sum + type.sold, 0);
+  return { percent: soldOut ? SELL_LIMIT * 100 : Math.min(SELL_LIMIT * 100, Math.floor((sold / offered) * 100)), soldOut };
+}
+
+/** "Sold out" or "45% of tickets sold", for an event. */
+export function eventSalesLabel(sales) {
+  if (!sales) return '';
+  return sales.soldOut ? 'Sold out' : `${sales.percent}% of tickets sold`;
 }
 
 /**
