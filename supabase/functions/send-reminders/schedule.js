@@ -67,14 +67,14 @@ export function emailContent(event, appUrl) {
     'You get this email because you tapped "Remind me" on this event in plusespot.',
     'To stop reminders for it, open My reminders in the app and remove it.',
   ].filter((line, index, lines) => line !== '' || lines[index - 1] !== '').join('\n');
-  const html = `<!doctype html><html><body style="margin:0;padding:24px;background:#0e1210;color:#fafafa;font-family:Arial,sans-serif">
+  const html = `<!doctype html><html><body style="margin:0;padding:24px;background:#0a0a0a;color:#fafafa;font-family:Arial,sans-serif">
 <div style="max-width:480px;margin:0 auto">
-<p style="color:#c6f432;font-weight:bold;margin:0 0 8px">plusespot reminder</p>
+<p style="color:#4ade80;font-weight:bold;margin:0 0 8px">plusespot reminder</p>
 <h1 style="font-size:24px;margin:0 0 12px">${escapeHtml(event.title)}</h1>
 <p style="margin:0 0 4px">${escapeHtml(when)}</p>
 <p style="margin:0 0 4px">${escapeHtml(where)}</p>
 ${event.host_name ? `<p style="margin:0 0 16px;color:#a3a3a3">Hosted by ${escapeHtml(event.host_name)}</p>` : ''}
-<p style="margin:16px 0"><a href="${escapeHtml(link)}" style="display:inline-block;padding:12px 20px;background:#c6f432;color:#0e1210;font-weight:bold;text-decoration:none;border-radius:999px">See the event</a></p>
+<p style="margin:16px 0"><a href="${escapeHtml(link)}" style="display:inline-block;padding:12px 20px;background:#22c55e;color:#0a0a0a;font-weight:bold;text-decoration:none;border-radius:999px">See the event</a></p>
 <p style="font-size:12px;color:#a3a3a3">You get this email because you tapped "Remind me" on this event. To stop, open My reminders in the app and remove it.</p>
 </div></body></html>`;
   return { subject, text, html };
@@ -149,12 +149,12 @@ export function salesEmail(event, milestone, holdsTicket, appUrl) {
   const notice = salesNotice(event, milestone, holdsTicket, appUrl);
   const text = [notice.title, notice.body, '', `See the event: ${notice.url}`, '',
     'You get this email because you set a reminder or have a ticket for this event in plusespot.'].join('\n');
-  const html = `<!doctype html><html><body style="margin:0;padding:24px;background:#0e1210;color:#fafafa;font-family:Arial,sans-serif">
+  const html = `<!doctype html><html><body style="margin:0;padding:24px;background:#0a0a0a;color:#fafafa;font-family:Arial,sans-serif">
 <div style="max-width:480px;margin:0 auto">
-<p style="color:#c6f432;font-weight:bold;margin:0 0 8px">plusespot</p>
+<p style="color:#4ade80;font-weight:bold;margin:0 0 8px">plusespot</p>
 <h1 style="font-size:22px;margin:0 0 12px">${escapeHtml(notice.title)}</h1>
 <p style="margin:0 0 16px">${escapeHtml(notice.body)}</p>
-<p style="margin:16px 0"><a href="${escapeHtml(notice.url)}" style="display:inline-block;padding:12px 20px;background:#c6f432;color:#0e1210;font-weight:bold;text-decoration:none;border-radius:999px">See the event</a></p>
+<p style="margin:16px 0"><a href="${escapeHtml(notice.url)}" style="display:inline-block;padding:12px 20px;background:#22c55e;color:#0a0a0a;font-weight:bold;text-decoration:none;border-radius:999px">See the event</a></p>
 <p style="font-size:12px;color:#a3a3a3">You get this email because you set a reminder or have a ticket for this event.</p>
 </div></body></html>`;
   return { subject: notice.title, text, html };

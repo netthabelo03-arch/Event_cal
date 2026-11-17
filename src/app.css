@@ -267,7 +267,7 @@ a.button--quiet:hover { color: var(--color-text); }
 .showcase__glow {
   position: absolute;
   border-radius: 50%;
-  background: radial-gradient(circle, rgb(198 244 50 / 0.5), transparent 65%);
+  background: radial-gradient(circle, rgb(34 197 94 / 0.5), transparent 65%);
   filter: blur(40px);
   animation: showcase-drift 22s ease-in-out infinite alternate;
 }
@@ -711,7 +711,7 @@ body.full .app { max-width: none; padding: 0; gap: 0; }
   width: 90%;
   height: 70%;
   transform: translateX(-50%);
-  background: radial-gradient(ellipse at center, rgb(198 244 50 / 0.35), transparent 70%);
+  background: radial-gradient(ellipse at center, rgb(34 197 94 / 0.35), transparent 70%);
   filter: blur(30px);
   pointer-events: none;
 }
@@ -751,7 +751,7 @@ body.full .app { max-width: none; padding: 0; gap: 0; }
 /* Side cards are darker so the front one stands out. */
 .spotlight__slide:not(.spotlight__slide--front) .spotlight__card { filter: brightness(0.6); }
 .spotlight__card:hover { color: var(--color-text); }
-.spotlight__slide--front .spotlight__card { border-color: var(--color-accent); box-shadow: 0 30px 70px -18px rgb(198 244 50 / 0.45); }
+.spotlight__slide--front .spotlight__card { border-color: var(--color-accent); box-shadow: 0 30px 70px -18px rgb(34 197 94 / 0.45); }
 .spotlight__art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
 .spotlight__art--sample {
   display: flex;
@@ -761,7 +761,7 @@ body.full .app { max-width: none; padding: 0; gap: 0; }
   font-size: 72px;
   font-weight: 700;
   color: var(--color-accent);
-  background: radial-gradient(circle at 30% 20%, #3a4a0e, #0e1210 70%);
+  background: radial-gradient(circle at 30% 20%, #14532d, #0a0a0a 70%);
 }
 .spotlight__text {
   position: absolute;
@@ -863,7 +863,7 @@ body.full .app { max-width: none; padding: 0; gap: 0; }
 .spotlight__track { transform: translateZ(calc(-1 * var(--ribbon-radius))); }
 .spotlight__slide { top: 28px; width: 232px; height: 250px; margin-left: -116px; backface-visibility: hidden; }
 .spotlight__card { border-radius: 10px; border-color: var(--color-line); box-shadow: none; }
-.spotlight__slide--front .spotlight__card { box-shadow: 0 0 0 1px var(--color-accent), 0 24px 50px -20px rgb(198 244 50 / 0.5); }
+.spotlight__slide--front .spotlight__card { box-shadow: 0 0 0 1px var(--color-accent), 0 24px 50px -20px rgb(34 197 94 / 0.5); }
 .spotlight__slide:not(.spotlight__slide--front) .spotlight__card { filter: brightness(0.7); }
 .spotlight__title { font-size: 17px; }
 .spotlight__text { padding: 40px 12px 12px; }
