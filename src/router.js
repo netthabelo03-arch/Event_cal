@@ -8,7 +8,7 @@
 const DISCOVER = { screen: 'discover' };
 
 /** Screens whose address is just their name, like "#/signin". */
-const NAMED_SCREENS = ['signup', 'signin', 'forgot', 'new-password', 'profile', 'my-events', 'new-event', 'review', 'feed', 'search', 'reminders', 'tickets', 'my-music', 'new-track'];
+const NAMED_SCREENS = ['signup', 'signin', 'forgot', 'new-password', 'profile', 'my-events', 'new-event', 'review', 'feed', 'search', 'reminders', 'tickets', 'my-music', 'new-track', 'terms', 'privacy'];
 
 /** The kinds of item that have a details screen. */
 export const ITEM_KINDS = ['event', 'host', 'artist', 'track'];
@@ -48,6 +48,10 @@ export function parseRoute(hash) {
   if (parts.length === 2 && parts[0] === 'edit-track' && ORDER_ID.test(parts[1])) {
     return { screen: 'edit-track', id: parts[1] };
   }
+  if (parts.length === 2 && parts[0] === 'tickets' && ORDER_ID.test(parts[1])) {
+    // My tickets with one event's folder open.
+    return { screen: 'tickets', id: parts[1] };
+  }
   if (parts.length === 2 && parts[0] === 'scan' && ORDER_ID.test(parts[1])) {
     return { screen: 'scan', id: parts[1] };
   }
@@ -75,6 +79,7 @@ export function hashFor(route) {
   if (route.screen === 'detail') return `#/${route.kind}/${route.id}`;
   if (route.screen === 'order') return `#/order/${route.id}`;
   if (route.screen === 'scan') return `#/scan/${route.id}`;
+  if (route.screen === 'tickets' && route.id) return `#/tickets/${route.id}`;
   if (route.screen === 'edit-track') return `#/edit-track/${route.id}`;
   return `#/${route.screen}`;
 }

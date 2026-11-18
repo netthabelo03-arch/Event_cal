@@ -89,3 +89,73 @@ export function pushPayload(event, appUrl) {
     url: eventUrl(appUrl, event.id),
   };
 }
+
+// ---------------------------------------------------------------------------
+// Sales notices: people who set a reminder for an event, or hold a ticket for
+// it, are told as its tickets pass 50% sold, 75% sold and sold out (90%, where
+// sales stop). These match src/tickets/rules.js; a test checks they agree.
+// ---------------------------------------------------------------------------
+
+/** Share of each ticket type that can be sold. */
+export const SELL_LIMIT = 0.9;
+
+/** The points at which people are told, as percentages. 90 means sold out. */
+export const SALES_MILESTONES = [50, 75, 90];
+
+function sellable(type) {
+  return Math.max(1, Math.floor(type.quantity * SELL_LIMIT));
+}
+
+/**
+ * How much of an event is sold, over all its ticket types.
+ * @returns {{ percent: number, soldOut: boolean } | null} null when it sells no tickets
+ */
+export function eventSales(types) {
+  const list = (types ?? []).filter((type) => type.quantity > 0);
+  if (list.length === 0) return null;
+  const soldOut = list.every((type) => type.sold >= sellable(type));
+  const offered = list.reduce((sum, type) => sum + type.quantity, 0);
+  const sold = list.reduce((sum, type) => sum + type.sold, 0);
+  return { percent: soldOut ? SELL_LIMIT * 100 : Math.min(SELL_LIMIT * 100, Math.floor((sold / offered) * 100)), soldOut };
+}
+
+/** The highest milestone an event has reached: 0, 50, 75, or 90 (sold out). */
+export function salesMilestone(sales) {
+  if (!sales) return 0;
+  if (sales.soldOut) return 90;
+  if (sales.percent >= 75) return 75;
+  if (sales.percent >= 50) return 50;
+  return 0;
+}
+
+/**
+ * What to tell one person about an event's sales.
+ * @param {boolean} holdsTicket the person already has a ticket for it
+ */
+export function salesNotice(event, milestone, holdsTicket, appUrl) {
+  const url = eventUrl(appUrl, event.id);
+  if (milestone >= 90) {
+    return holdsTicket
+      ? { title: `${event.title} is sold out`, body: 'Good thing you have your ticket. It is in My tickets.', url }
+      : { title: `${event.title} is sold out`, body: 'All tickets are gone. Keep your reminder to hear about the event.', url };
+  }
+  return holdsTicket
+    ? { title: `${event.title}: ${milestone}% of tickets sold`, body: 'Your ticket is safe in My tickets. Tell your friends before it sells out.', url }
+    : { title: `${event.title}: ${milestone}% of tickets sold`, body: 'Get your ticket before it sells out at 90%.', url };
+}
+
+/** The same notice as an email. */
+export function salesEmail(event, milestone, holdsTicket, appUrl) {
+  const notice = salesNotice(event, milestone, holdsTicket, appUrl);
+  const text = [notice.title, notice.body, '', `See the event: ${notice.url}`, '',
+    'You get this email because you set a reminder or have a ticket for this event in plusespot.'].join('\n');
+  const html = `<!doctype html><html><body style="margin:0;padding:24px;background:#0a0a0a;color:#fafafa;font-family:Arial,sans-serif">
+<div style="max-width:480px;margin:0 auto">
+<p style="color:#4ade80;font-weight:bold;margin:0 0 8px">plusespot</p>
+<h1 style="font-size:22px;margin:0 0 12px">${escapeHtml(notice.title)}</h1>
+<p style="margin:0 0 16px">${escapeHtml(notice.body)}</p>
+<p style="margin:16px 0"><a href="${escapeHtml(notice.url)}" style="display:inline-block;padding:12px 20px;background:#22c55e;color:#0a0a0a;font-weight:bold;text-decoration:none;border-radius:999px">See the event</a></p>
+<p style="font-size:12px;color:#a3a3a3">You get this email because you set a reminder or have a ticket for this event.</p>
+</div></body></html>`;
+  return { subject: notice.title, text, html };
+}

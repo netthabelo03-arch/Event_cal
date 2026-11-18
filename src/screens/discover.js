@@ -7,6 +7,7 @@ import { startPreviews } from '../events/preview.js';
 import { hostsFrom } from '../events/discovery.js';
 import { eventCard, hostCard } from '../events/cards.js';
 import { spotlight } from '../events/spotlight.js';
+import { legalLinks } from './legal.js';
 import { listLiveTracks } from '../music/api.js';
 import { trackCard, artistCard } from '../music/cards.js';
 import { artistsFrom } from '../music/rules.js';
@@ -123,9 +124,13 @@ async function categorySections(liveEvents) {
 
 export async function renderDiscover({ session }) {
   // Both are allowed to fail: browsing must still work without them.
+  let eventsFailed = false;
   const [{ profile, admin }, liveEvents] = await Promise.all([
     loadViewer(session),
-    listLiveEvents().catch(() => []),
+    listLiveEvents().catch(() => {
+      eventsFailed = true;
+      return [];
+    }),
   ]);
 
   const actions = [linkTo('#/search', 'Search events')];
@@ -143,6 +148,8 @@ export async function renderDiscover({ session }) {
       el('p', { class: 'lead', text: 'Short event clips. Reminders. Tickets.' }),
       el('div', { class: 'actions' }, actions),
     ]),
+    // Say so when the real events could not be fetched, rather than quietly showing only samples.
+    ...(eventsFailed ? [el('p', { class: 'message message--error', role: 'alert', text: 'Events could not be loaded just now. Check your connection and reload the page. The items below are samples.' })] : []),
     el('p', { class: 'notice', text: 'Items marked Sample are placeholders until more real events are posted.' }),
     await categorySections(liveEvents),
   ];
@@ -181,5 +188,6 @@ export async function renderDiscover({ session }) {
     content.push(el('p', { class: 'link-row' }, ['Hosting an event or making music? ', linkTo('#/profile', 'Switch to Host or Artist')]));
   }
 
+  content.push(legalLinks());
   return content;
 }

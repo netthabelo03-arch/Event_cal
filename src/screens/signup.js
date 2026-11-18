@@ -19,7 +19,7 @@ export function renderSignUp() {
     message.node,
     el('div', { class: 'push-down stack' }, [
       submit,
-      el('p', { class: 'link-row', text: 'By continuing you agree to the Terms and Privacy Policy.' }),
+      el('p', { class: 'link-row' }, ['By continuing you agree to the ', linkTo('#/terms', 'Terms'), ' and ', linkTo('#/privacy', 'Privacy Policy'), '.']),
       el('p', { class: 'link-row' }, ['Already have an account? ', linkTo('#/signin', 'Log in')]),
     ]),
   ]);

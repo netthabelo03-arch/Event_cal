@@ -60,17 +60,60 @@ export function checkTicketTypes(rows) {
   return { ok: errors.every((error) => error === null), errors, types };
 }
 
-/** How many of a ticket type are left. */
-export function remaining(type) {
-  return Math.max(0, type.quantity - type.sold);
+/**
+ * Sales stop once this share of a ticket type is sold. The database enforces
+ * the same limit (sellable_tickets in supabase/015_sales_limit.sql).
+ */
+export const SELL_LIMIT = 0.9;
+
+/** How many of a ticket type can be sold: 90% of those offered, rounded down, and at least one. */
+export function sellable(type) {
+  return Math.max(1, Math.floor(type.quantity * SELL_LIMIT));
 }
 
-/** "Sold out", "3 left" (when few are left), or "" when plenty are left. */
+/** How many of a ticket type are left to buy. */
+export function remaining(type) {
+  return Math.max(0, sellable(type) - type.sold);
+}
+
+/** The share of a ticket type that is sold, as a whole percentage. It stops at 90. */
+export function percentSold(type) {
+  if (!(type.quantity > 0)) return 0;
+  return Math.min(SELL_LIMIT * 100, Math.floor((type.sold / type.quantity) * 100));
+}
+
+/** How many of a ticket type someone can start buying now: what is left, less what other people are paying for. */
+export function buyable(type) {
+  return Math.max(0, remaining(type) - (type.held ?? 0));
+}
+
+/** "Sold out", or how much is sold, such as "45% sold". */
 export function availabilityLabel(type) {
-  const left = remaining(type);
-  if (left === 0) return 'Sold out';
-  if (left <= 20) return `${left} left`;
-  return '';
+  if (remaining(type) === 0) return 'Sold out';
+  return `${percentSold(type)}% sold`;
+}
+
+/** Said when the tickets left are all being paid for by other people right now. */
+export const HELD_NOTE = 'The last tickets are being paid for by other people. If they do not finish, the tickets come back within 30 minutes.';
+
+/**
+ * How much of a whole event is sold, over all its ticket types.
+ * @param {{ quantity: number, sold: number }[]} types
+ * @returns {{ percent: number, soldOut: boolean } | null} null when the event sells no tickets
+ */
+export function eventSales(types) {
+  const list = (types ?? []).filter((type) => type.quantity > 0);
+  if (list.length === 0) return null;
+  const soldOut = list.every((type) => remaining(type) === 0);
+  const offered = list.reduce((sum, type) => sum + type.quantity, 0);
+  const sold = list.reduce((sum, type) => sum + type.sold, 0);
+  return { percent: soldOut ? SELL_LIMIT * 100 : Math.min(SELL_LIMIT * 100, Math.floor((sold / offered) * 100)), soldOut };
+}
+
+/** "Sold out" or "45% of tickets sold", for an event. */
+export function eventSalesLabel(sales) {
+  if (!sales) return '';
+  return sales.soldOut ? 'Sold out' : `${sales.percent}% of tickets sold`;
 }
 
 /**
@@ -97,7 +140,7 @@ export function maxFor(type, quantities) {
   const others = Object.entries(quantities)
     .filter(([id]) => id !== type.id)
     .reduce((sum, [, quantity]) => sum + (Number.isInteger(quantity) ? quantity : 0), 0);
-  return Math.max(0, Math.min(remaining(type), MAX_PER_ORDER - others));
+  return Math.max(0, Math.min(buyable(type), MAX_PER_ORDER - others));
 }
 
 /** "Buy 2 tickets · R300", or for free tickets "Get 2 free tickets". */
@@ -109,6 +152,7 @@ export function buyLabel(count, totalCents) {
 
 const CHECKOUT_ERRORS = {
   sold_out: 'Sorry, there are not enough of those tickets left. Choose fewer, or another ticket type.',
+  tickets_held: 'The last tickets are being paid for by other people right now. If they do not finish, the tickets come back within 30 minutes. Please try again a little later.',
   event_not_on_sale: 'Tickets for this event are no longer on sale.',
   too_many_tickets: `You can buy at most ${MAX_PER_ORDER} tickets in one order.`,
   bad_quantity: 'Choose between 1 and 10 tickets.',

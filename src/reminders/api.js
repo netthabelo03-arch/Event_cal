@@ -3,7 +3,7 @@
 
 import { getClient } from '../auth/client.js';
 
-const EVENT_COLUMNS = 'id, title, starts_at, venue, city, host_name, status, clip_path';
+const EVENT_COLUMNS = 'id, title, starts_at, venue, city, host_name, status, clip_path, ticket_types(quantity, sold)';
 
 /** @returns {Promise<boolean>} whether this person has a reminder for this event */
 export async function hasReminder(userId, eventId) {

@@ -5,6 +5,7 @@ import { listReviewQueue, reviewEvent, clipUrl } from '../events/api.js';
 import { listTrackQueue, reviewTrack, audioUrl } from '../music/api.js';
 import { genreName, formatTime, MAX_AUDIO_SECONDS } from '../music/rules.js';
 import { listOpenDisputes, resolveDispute, isOverdue, disputeErrorMessage } from '../music/disputes.js';
+import { listOpenReports, resolveReport } from '../reports/reports.js';
 import { CATEGORIES, formatWhen } from '../events/rules.js';
 import { MAX_CLIP_SECONDS } from '../rules/clip.js';
 import { friendlyAuthError } from '../auth/errors.js';
@@ -36,6 +37,50 @@ function eventAsItem(event) {
     who: 'host',
     decide: (choice) => reviewEvent(event.id, choice),
   };
+}
+
+/** An event or track that people reported: look at it, then take it down or dismiss the reports. */
+async function reportCard(report, onDone) {
+  const media = [];
+  if (report.clipPath) {
+    const video = el('video', { class: 'clip', controls: '', preload: 'metadata', playsinline: '' });
+    video.src = await clipUrl(report.clipPath);
+    media.push(video);
+  }
+  if (report.audioPath) {
+    const audio = el('audio', { class: 'review-card__audio', controls: '', preload: 'metadata' });
+    audio.src = await audioUrl(report.audioPath);
+    media.push(audio);
+  }
+  const error = el('p', { class: 'field__error', role: 'alert' });
+  error.hidden = true;
+  const dismiss = el('button', { type: 'button', class: 'button button--quiet', text: 'Dismiss' });
+  const takeDown = el('button', { type: 'button', class: 'button button--danger', text: 'Take it down' });
+  const card = el('li', { class: 'review-card' }, [
+    ...media,
+    el('span', { class: 'event-row__title', text: `${report.kind === 'event' ? 'Event' : 'Track'} · ${report.title}` }),
+    el('span', { class: 'event-row__meta', text: `${report.by ? `Posted by ${report.by} · ` : ''}${report.count} ${report.count === 1 ? 'report' : 'reports'} · first on ${formatWhen(report.first)}` }),
+    el('span', { class: 'event-row__meta', text: `Reported as: ${report.reasons.join(', ')}` }),
+    ...report.details.map((text) => el('p', { class: 'review-card__text', text })),
+    error,
+    el('div', { class: 'field-pair' }, [dismiss, takeDown]),
+  ]);
+  async function decide(button, busyText, down) {
+    error.hidden = true;
+    await whileBusy(button, busyText, async () => {
+      try {
+        await resolveReport(report.reportId, down);
+        card.remove();
+        onDone();
+      } catch {
+        error.textContent = 'That did not work. Check the connection and try again.';
+        error.hidden = false;
+      }
+    });
+  }
+  dismiss.addEventListener('click', () => decide(dismiss, 'Dismissing…', false));
+  takeDown.addEventListener('click', () => decide(takeDown, 'Taking down…', true));
+  return card;
 }
 
 /** A dispute an artist filed: listen to the track, then take it down or keep it. */
@@ -195,7 +240,8 @@ export async function renderReview({ session }) {
     // Before the Sprint 8 database scripts are run these tables are not there yet.
     const tracks = await listTrackQueue().catch(() => []);
     const disputes = await listOpenDisputes().catch(() => []);
-    waiting = events.length + tracks.length + disputes.length;
+    const reports = await listOpenReports().catch(() => []);
+    waiting = events.length + tracks.length + disputes.length + reports.length;
     update();
 
     const parts = [];
@@ -222,6 +268,11 @@ export async function renderReview({ session }) {
     await section('Disputes', disputes, (dispute, done) => disputeCard(dispute, () => {
       done();
       // The database is now the truth: draw the queue again without this dispute.
+      fill().catch(() => {});
+    }));
+    // A reported item may also be waiting below, so draw the queue again once it is actioned.
+    await section('Reports', reports, (report, done) => reportCard(report, () => {
+      done();
       fill().catch(() => {});
     }));
     await section('Events', events, (event, done) => reviewCard(eventAsItem(event), done));
