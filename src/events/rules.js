@@ -109,6 +109,7 @@ export const STATUSES = {
   in_review: { label: 'In review', tone: 'waiting' },
   live: { label: 'Live in feed', tone: 'good' },
   rejected: { label: 'Not approved', tone: 'bad' },
+  cancelled: { label: 'Cancelled', tone: 'bad' },
 };
 
 export function statusOf(status) {

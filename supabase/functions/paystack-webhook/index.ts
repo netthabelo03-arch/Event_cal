@@ -1,6 +1,7 @@
 // Edge Function: paystack-webhook.
 // Paystack calls this address when a payment succeeds, even if the buyer
-// closed the page before coming back to the app. The signature proves the
+// closed the page before coming back to the app, and when a refund is
+// processed or fails. The signature proves the
 // call came from Paystack; anything unsigned is refused.
 //
 // Secret: PAYSTACK_SECRET_KEY.
@@ -9,7 +10,7 @@
 //   https://tylodszndhehbiedlqjp.supabase.co/functions/v1/paystack-webhook
 
 import { withSupabase } from 'npm:@supabase/server@^1';
-import { verifySignature, paidOrderFrom } from './paystack.js';
+import { PAYSTACK_API, verifySignature, paidOrderFrom, refundResultFrom } from './paystack.js';
 
 export default {
   fetch: withSupabase({ auth: 'none' }, async (req, ctx) => {
@@ -28,10 +29,25 @@ export default {
     if (event.event === 'charge.success') {
       const paid = paidOrderFrom(event.data);
       if (paid) {
-        const { error } = await ctx.supabaseAdmin.rpc('fulfill_payment', { p_reference: paid.orderId, p_amount_cents: paid.amountCents });
+        const { data: result, error } = await ctx.supabaseAdmin.rpc('fulfill_payment', { p_reference: paid.orderId, p_amount_cents: paid.amountCents });
         // Answer with an error so Paystack tries again later.
         if (error) return new Response('could not record payment', { status: 500 });
+        if (result === 'paid_but_cancelled') {
+          // Paid after the Host cancelled the event: pay it all back.
+          const response = await fetch(`${PAYSTACK_API}/refund`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${Deno.env.get('PAYSTACK_SECRET_KEY') ?? ''}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ transaction: paid.orderId, amount: paid.amountCents }),
+          }).catch(() => null);
+          if (!response?.ok) await ctx.supabaseAdmin.rpc('record_refund', { p_order_id: paid.orderId, p_result: 'failed' });
+        }
       }
+    }
+    // A refund finished (or failed) at Paystack.
+    const refund = refundResultFrom(event);
+    if (refund) {
+      const { error } = await ctx.supabaseAdmin.rpc('record_refund', { p_order_id: refund.orderId, p_result: refund.result });
+      if (error) return new Response('could not record refund', { status: 500 });
     }
     return new Response('ok');
   }),

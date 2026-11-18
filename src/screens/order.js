@@ -36,6 +36,10 @@ export async function renderOrder({ session, id }) {
       status.textContent = 'Your tickets are ready.';
       const tickets = el('a', { href: `#/tickets/${order.event_id}`, class: 'button button--primary', text: 'See my tickets' });
       next.replaceChildren(tickets);
+    } else if (state === 'cancelled') {
+      heading.textContent = 'This event was cancelled';
+      status.textContent = 'The Host cancelled the event after you paid, so your money is being paid back in full. It can take up to 10 business days to reach your card.';
+      next.replaceChildren(el('a', { href: '#/tickets', class: 'button button--quiet', text: 'See my refunds' }));
     } else if (state === 'failed') {
       heading.textContent = 'Payment not completed';
       status.textContent = 'You have not been charged. You can try again from the event page.';
@@ -76,7 +80,11 @@ export async function renderOrder({ session, id }) {
     el('span', { text: formatRand(item.quantity * item.unit_price_cents) }),
   ]));
 
-  show(order.status);
+  if (order.booking_fee_cents > 0) {
+    lines.push(el('li', { class: 'order-line' }, [el('span', { text: 'Booking fee' }), el('span', { text: formatRand(order.booking_fee_cents) })]));
+  }
+
+  show(order.status === 'paid' && order.refund_reason === 'cancelled' ? 'cancelled' : order.status);
 
   // Ask the checkout a few times (in demo mode the first answer says so) while the person waits; stop when they leave the page.
   if (order.status === 'pending') {

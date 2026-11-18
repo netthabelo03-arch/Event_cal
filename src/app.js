@@ -13,6 +13,7 @@ import { renderForgot } from './screens/forgot.js';
 import { renderNewPassword } from './screens/newpassword.js';
 import { renderProfile } from './screens/profile.js';
 import { renderMyEvents } from './screens/myevents.js';
+import { renderPayouts } from './screens/payouts.js';
 import { renderNewEvent } from './screens/newevent.js';
 import { renderReview } from './screens/review.js';
 import { renderFeed } from './screens/feed.js';
@@ -35,6 +36,7 @@ const SCREENS = {
   'new-password': renderNewPassword,
   profile: renderProfile,
   'my-events': renderMyEvents,
+  payouts: renderPayouts,
   'new-event': renderNewEvent,
   review: renderReview,
   feed: renderFeed,

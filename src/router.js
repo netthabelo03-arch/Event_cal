@@ -8,7 +8,7 @@
 const DISCOVER = { screen: 'discover' };
 
 /** Screens whose address is just their name, like "#/signin". */
-const NAMED_SCREENS = ['signup', 'signin', 'forgot', 'new-password', 'profile', 'my-events', 'new-event', 'review', 'feed', 'search', 'reminders', 'tickets', 'my-music', 'new-track', 'terms', 'privacy'];
+const NAMED_SCREENS = ['signup', 'signin', 'forgot', 'new-password', 'profile', 'my-events', 'new-event', 'review', 'feed', 'search', 'reminders', 'tickets', 'my-music', 'new-track', 'terms', 'privacy', 'payouts'];
 
 /** The kinds of item that have a details screen. */
 export const ITEM_KINDS = ['event', 'host', 'artist', 'track'];
@@ -19,7 +19,7 @@ const ITEM_ID = /^[a-z0-9][a-z0-9-]{0,63}$/;
 const ORDER_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 /** Screens that only a signed-in person may open. */
-export const PROTECTED_SCREENS = ['detail', 'profile', 'new-password', 'my-events', 'new-event', 'review', 'reminders', 'tickets', 'order', 'scan', 'my-music', 'new-track', 'edit-track'];
+export const PROTECTED_SCREENS = ['detail', 'profile', 'new-password', 'my-events', 'new-event', 'review', 'reminders', 'tickets', 'order', 'scan', 'my-music', 'new-track', 'edit-track', 'payouts'];
 
 /** Screens that make no sense once signed in. */
 export const GUEST_SCREENS = ['signup', 'signin', 'forgot'];

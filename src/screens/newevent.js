@@ -6,6 +6,7 @@ import { CATEGORIES, CLIP_TYPES, checkClip, checkEvent } from '../events/rules.j
 import { createEvent } from '../events/api.js';
 import { addTicketTypes } from '../tickets/api.js';
 import { ticketEditor } from '../tickets/editor.js';
+import { REFUND_CHOICES } from '../rules/fees.js';
 import { friendlyAuthError } from '../auth/errors.js';
 import { loadViewer } from '../viewer.js';
 import { topBar } from '../usermenu.js';
@@ -99,6 +100,22 @@ export async function renderNewEvent({ session, navigate }) {
 
   const tickets = ticketEditor();
 
+  // Refunds: the Host decides, per event, until when buyers can cancel.
+  let refundDays = null;
+  const refundButtons = REFUND_CHOICES.map((choice) => {
+    const button = el('button', { type: 'button', class: 'pill', 'aria-pressed': String(choice.days === null), text: choice.label });
+    button.addEventListener('click', () => {
+      refundDays = choice.days;
+      for (const other of refundButtons) other.setAttribute('aria-pressed', String(other === button));
+    });
+    return button;
+  });
+  const refunds = el('div', { class: 'field' }, [
+    el('span', { class: 'field__label', id: 'refund-label', text: 'Refunds' }),
+    el('p', { class: 'field__hint', text: 'Until when can buyers cancel and get the ticket price back? Refunds come out of your sales. If you cancel the event, everyone is refunded in full. You can change this until the first ticket is sold.' }),
+    el('div', { class: 'pills', role: 'group', 'aria-labelledby': 'refund-label' }, refundButtons),
+  ]);
+
   const message = messageBox();
   const submit = el('button', { type: 'submit', class: 'button button--primary', text: 'Submit for review' });
 
@@ -121,6 +138,7 @@ export async function renderNewEvent({ session, navigate }) {
       description, descriptionError.node,
     ]),
     tickets.node,
+    refunds,
     message.node,
     el('div', { class: 'push-down' }, [submit]),
   ]);
@@ -137,6 +155,7 @@ export async function renderNewEvent({ session, navigate }) {
       description: description.value,
       clipFile,
       clipSeconds,
+      refundDays,
     };
     const { ok, errors } = checkEvent(values, Date.now());
     clipError.set(errors.clip ?? null);
