@@ -162,6 +162,31 @@ const CHECKOUT_ERRORS = {
   not_signed_in: 'Log in to buy tickets.',
 };
 
+const REFUND_ERRORS = {
+  refund_deadline_passed: 'The refund window for this event has closed.',
+  no_refunds: 'This event does not offer refunds.',
+  ticket_used: 'A ticket in this order has been used at the door, so it cannot be refunded.',
+  already_refunded: 'This order has already been refunded.',
+  not_refundable: 'Free tickets have nothing to refund.',
+  refund_not_started: 'Paystack could not start the refund, so your tickets are still valid. Please try again later.',
+  cannot_cancel: 'Only upcoming events can be cancelled.',
+  not_your_event: 'This is not your event.',
+  tickets_already_sold: 'The refund rule cannot change once tickets are sold.',
+  hosts_only: 'Only Hosts can add bank details.',
+  payouts_need_paystack: 'Payouts work once Paystack is switched on.',
+  bad_bank: 'Choose your bank.',
+  bad_account_number: 'Enter your account number: only digits, 6 to 16 of them.',
+  bad_name: 'Enter the account holder or business name.',
+  bank_details_refused: 'Paystack did not accept those bank details. Check the bank and account number.',
+  banks_failed: 'The list of banks could not be loaded. Please try again.',
+};
+
+/** Turn a refund, cancel or payout error into a sentence a person can act on. */
+export function moneyErrorMessage(code) {
+  const key = Object.keys(REFUND_ERRORS).find((name) => String(code ?? '').includes(name));
+  return key ? REFUND_ERRORS[key] : 'Something went wrong. Please try again.';
+}
+
 /** Turn a checkout error into a sentence a person can act on. */
 export function checkoutErrorMessage(code) {
   const key = Object.keys(CHECKOUT_ERRORS).find((name) => String(code ?? '').includes(name));

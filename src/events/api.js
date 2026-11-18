@@ -7,7 +7,7 @@ import { clipPath, startsAtIso } from './rules.js';
 import { cleanSearch } from './discovery.js';
 
 const BUCKET = 'clips';
-const COLUMNS = 'id, host_id, host_name, title, description, starts_at, venue, city, category, clip_path, clip_seconds, status, reject_reason, created_at, view_count';
+const COLUMNS = 'id, host_id, host_name, title, description, starts_at, venue, city, category, clip_path, clip_seconds, status, reject_reason, created_at, view_count, refund_days';
 
 /** @returns {Promise<boolean>} whether the signed-in person is an admin */
 export async function isAdmin() {
@@ -49,6 +49,7 @@ export async function createEvent(userId, hostName, form) {
       clip_path: path,
       clip_seconds: Math.round(form.clipSeconds * 10) / 10,
       status: 'in_review',
+      refund_days: Number.isInteger(form.refundDays) ? form.refundDays : null,
     })
     .select(COLUMNS)
     .single();

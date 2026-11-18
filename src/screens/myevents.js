@@ -2,9 +2,10 @@
 // to posting a new one.
 
 import { listMyEvents } from '../events/api.js';
-import { addTicketTypes } from '../tickets/api.js';
+import { addTicketTypes, cancelEvent, eventTakings, getMyPayout, setRefundDays } from '../tickets/api.js';
+import { REFUND_CHOICES, refundPolicyLabel } from '../rules/fees.js';
 import { ticketEditor } from '../tickets/editor.js';
-import { formatRand } from '../tickets/rules.js';
+import { formatRand, moneyErrorMessage } from '../tickets/rules.js';
 import { startBoost, payDemoBoost, verifyBoost } from '../boosts/api.js';
 import { BOOST_OPTIONS, boostedUntil, boostedLabel, boostErrorMessage } from '../boosts/rules.js';
 import { statusOf, formatWhen } from '../events/rules.js';
@@ -144,6 +145,87 @@ function boostPanel(event) {
   return panel;
 }
 
+/** Change the refund rule; only works until the first ticket is sold. */
+function refundRulePanel(event) {
+  const line = el('span', { class: 'event-row__meta', text: refundPolicyLabel(event.refund_days) });
+  const change = el('button', { type: 'button', class: 'text-link', text: 'Change' });
+  const area = el('div', { class: 'link-row' }, [line, change]);
+  change.addEventListener('click', () => {
+    const problem = el('p', { class: 'field__error', role: 'alert' });
+    problem.hidden = true;
+    const pills = REFUND_CHOICES.map((choice) => {
+      const button = el('button', { type: 'button', class: 'pill', 'aria-pressed': String(choice.days === (event.refund_days ?? null)), text: choice.label });
+      button.addEventListener('click', async () => {
+        problem.hidden = true;
+        try {
+          await setRefundDays(event.id, choice.days);
+          event.refund_days = choice.days;
+          line.textContent = refundPolicyLabel(choice.days);
+          area.replaceChildren(line, change);
+        } catch (error) {
+          problem.textContent = moneyErrorMessage(error?.message);
+          problem.hidden = false;
+        }
+      });
+      return button;
+    });
+    area.replaceChildren(el('div', { class: 'stack' }, [el('div', { class: 'pills' }, pills), problem]));
+  });
+  return area;
+}
+
+/** Ticket money for one event: what was sold, plusespot's 5%, what the Host gets, refunds. */
+function takingsLine(event) {
+  const line = el('span', { class: 'event-row__meta' });
+  eventTakings(event.id).then((takings) => {
+    if (!takings || (takings.paid_orders === 0 && Number(takings.refunded_cents) === 0)) return;
+    const sales = Number(takings.tickets_cents);
+    const commission = Number(takings.commission_cents);
+    const refunded = Number(takings.refunded_cents);
+    line.textContent = `Sales ${formatRand(sales)} · plusespot 5% ${formatRand(commission)} · yours ${formatRand(sales - commission)}${refunded > 0 ? ` · refunded ${formatRand(refunded)}` : ''}`;
+  }).catch(() => {});
+  return line;
+}
+
+/** "Cancel event": two taps, then every buyer is refunded in full. */
+function cancelPanel(event, row) {
+  const open = el('button', { type: 'button', class: 'button button--danger button--small', text: 'Cancel event' });
+  const area = el('div', { class: 'stack' }, [open]);
+  open.addEventListener('click', () => {
+    const problem = el('p', { class: 'field__error', role: 'alert' });
+    problem.hidden = true;
+    const sure = el('button', { type: 'button', class: 'button button--danger', text: 'Yes, cancel and refund everyone' });
+    const keep = el('button', { type: 'button', class: 'text-link', text: 'Keep the event' });
+    keep.addEventListener('click', () => area.replaceChildren(open));
+    sure.addEventListener('click', async () => {
+      problem.hidden = true;
+      let result = null;
+      await whileBusy(sure, 'Cancelling…', async () => {
+        try {
+          result = await cancelEvent(event.id);
+        } catch (error) {
+          problem.textContent = moneyErrorMessage(error?.code);
+          problem.hidden = false;
+        }
+      });
+      if (!result) return;
+      const refunds = result.refunds === 0 ? 'Nobody had paid yet, so there was nothing to refund.'
+        : `${result.refunds} ${result.refunds === 1 ? 'order is' : 'orders are'} being refunded in full.${result.failed > 0 ? ` ${result.failed} could not be started; we will follow up.` : ''}`;
+      row.replaceChildren(
+        el('span', { class: 'event-row__title', text: event.title }),
+        el('span', { class: 'chip chip--bad', text: 'Cancelled' }),
+        el('p', { class: 'event-row__meta', role: 'status', text: `The event is cancelled and no longer listed. ${refunds}` }),
+      );
+    });
+    area.replaceChildren(
+      el('p', { class: 'event-row__meta', text: 'This cannot be undone. The event leaves Discover, every ticket stops working, and every buyer gets their money back in full, booking fee included. Refunds come out of your sales.' }),
+      problem,
+      el('div', { class: 'link-row' }, [sure, keep]),
+    );
+  });
+  return area;
+}
+
 function eventRow(event) {
   const status = statusOf(event.status);
   const lines = [
@@ -167,6 +249,9 @@ function eventRow(event) {
   if (!hasTickets && (event.status === 'live' || event.status === 'in_review') && Date.parse(event.starts_at) > Date.now()) {
     lines.push(addTicketsPanel(event));
   }
+  const upcoming = Date.parse(event.starts_at) > Date.now();
+  if (event.status === 'live' || event.status === 'cancelled') lines.push(takingsLine(event));
+  if ((event.status === 'live' || event.status === 'in_review') && upcoming) lines.push(refundRulePanel(event));
   if (event.status === 'live') {
     const view = linkTo(`#/event/${event.id}`, 'View event');
     view.className = 'text-link event-row__link';
@@ -177,7 +262,21 @@ function eventRow(event) {
       lines.push(scan);
     }
   }
-  return el('li', { class: 'event-row' }, lines);
+  const row = el('li', { class: 'event-row' }, lines);
+  if ((event.status === 'live' || event.status === 'in_review') && upcoming) row.append(cancelPanel(event, row));
+  return row;
+}
+
+/** Where the Host's ticket money goes: their bank, or a nudge to add it. */
+async function payoutCard(userId) {
+  const payout = await getMyPayout(userId).catch(() => null);
+  const link = el('a', { href: '#/payouts', class: 'text-link', text: payout ? 'Change bank details' : 'Add bank details' });
+  return el('div', { class: `notice${payout ? '' : ' notice--warning'}` }, [
+    el('p', { text: payout
+      ? `Ticket money is paid to ${payout.bank_name}, account ending ${payout.account_last4}, the next business day after each sale (less plusespot's 5%).`
+      : 'Add your bank details to get your ticket money automatically, the next business day after each sale (less plusespot\'s 5%).' }),
+    link,
+  ]);
 }
 
 export async function renderMyEvents({ session }) {
@@ -217,5 +316,5 @@ export async function renderMyEvents({ session }) {
   if (events.length === 0) {
     return [...head, promote, el('p', { class: 'notice', text: 'You have not posted an event yet. Your events and their review status will show here.' })];
   }
-  return [...head, promote, el('ul', { class: 'event-list' }, events.map(eventRow))];
+  return [...head, promote, await payoutCard(session.user.id), el('ul', { class: 'event-list' }, events.map(eventRow))];
 }

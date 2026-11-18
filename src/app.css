@@ -999,3 +999,5 @@ body.full .app { max-width: none; padding: 0; gap: 0; }
 .ticket__number { font-size: 13px; font-weight: 600; color: var(--color-text-soft); }
 @media (max-width: 480px) { .folder__sales { display: none; } }
 .sold-meter__label--held { color: var(--color-warning); }
+.notice--warning { border-color: var(--color-warning); }
+.refund { margin-top: var(--space-2, 0.5rem); }

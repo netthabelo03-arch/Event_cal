@@ -3,6 +3,7 @@
 
 import { listTicketTypes, startCheckout } from './api.js';
 import { formatRand, availabilityLabel, cartSummary, maxFor, buyLabel, checkoutErrorMessage, remaining, percentSold, buyable, HELD_NOTE } from './rules.js';
+import { orderPrice, refundPolicyLabel } from '../rules/fees.js';
 import { el, icon, whileBusy } from '../dom.js';
 
 const MINUS = '<path d="M5 12h14"></path>';
@@ -32,8 +33,11 @@ export async function ticketsBox(event, navigate) {
       plus.disabled = chosen >= maxFor(type, quantities);
     }
     const summary = cartSummary(types, quantities);
-    total.textContent = summary.count === 0 ? '' : `Total: ${formatRand(summary.totalCents)}`;
-    buy.textContent = buyLabel(summary.count, summary.totalCents);
+    const price = orderPrice(summary.totalCents);
+    total.textContent = summary.count === 0 ? ''
+      : price.bookingFeeCents === 0 ? `Total: ${formatRand(price.totalCents)}`
+        : `Tickets ${formatRand(price.subtotalCents)} + booking fee ${formatRand(price.bookingFeeCents)} = ${formatRand(price.totalCents)}`;
+    buy.textContent = buyLabel(summary.count, price.totalCents);
     buy.disabled = summary.count === 0;
   }
 
@@ -106,6 +110,7 @@ export async function ticketsBox(event, navigate) {
     total,
     message,
     buy,
-    el('p', { class: 'event-row__meta', text: 'Your tickets appear in My tickets after paying.' }),
+    el('p', { class: 'event-row__meta', text: 'Your tickets appear in My tickets after paying. The booking fee covers the card payment.' }),
+    el('p', { class: 'event-row__meta', text: refundPolicyLabel(event.refund_days) }),
   ]);
 }

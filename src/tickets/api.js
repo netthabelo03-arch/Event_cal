@@ -62,7 +62,7 @@ export async function getOrder(orderId) {
   const client = await getClient();
   const { data, error } = await client
     .from('orders')
-    .select('id, status, total_cents, created_at, paid_at, event_id, events(id, title, starts_at, venue, city), order_items(quantity, unit_price_cents, ticket_types(name))')
+    .select('id, status, total_cents, booking_fee_cents, refund_status, refund_reason, refund_cents, created_at, paid_at, event_id, events(id, title, starts_at, venue, city), order_items(quantity, unit_price_cents, ticket_types(name))')
     .eq('id', orderId)
     .maybeSingle();
   if (error) throw error;
@@ -74,7 +74,7 @@ export async function listMyTickets(userId) {
   const client = await getClient();
   const { data, error } = await client
     .from('tickets')
-    .select('id, code, checked_in_at, events(id, title, starts_at, venue, city, status, ticket_types(quantity, sold)), ticket_types(name)')
+    .select('id, code, checked_in_at, order_id, orders(id, status, total_cents, booking_fee_cents, refund_status), events(id, title, starts_at, venue, city, status, refund_days, ticket_types(quantity, sold)), ticket_types(name)')
     .eq('owner_id', userId);
   if (error) throw error;
   return data.sort((a, b) => Date.parse(a.events.starts_at) - Date.parse(b.events.starts_at));
@@ -105,4 +105,60 @@ export async function checkInTicket(eventId, code) {
   const { data, error } = await client.rpc('check_in_ticket', { p_event_id: eventId, p_code: code });
   if (error) throw error;
   return Array.isArray(data) ? data[0] : data;
+}
+
+/** The signed-in person's refunded or cancelled orders, newest first. */
+export async function listMyRefunds(userId) {
+  const client = await getClient();
+  const { data, error } = await client
+    .from('orders')
+    .select('id, total_cents, refund_status, refund_reason, refund_cents, refund_requested_at, events(id, title, starts_at), order_items(quantity, ticket_types(name))')
+    .eq('buyer_id', userId)
+    .not('refund_status', 'is', null)
+    .order('refund_requested_at', { ascending: false });
+  if (error) throw error;
+  return data;
+}
+
+/** Cancel one of your orders for your money back (within the event's refund window). */
+export function requestRefund(orderId) {
+  return checkout({ action: 'refund', order_id: orderId });
+}
+
+/** A Host cancels their own upcoming event; every buyer is refunded in full. */
+export function cancelEvent(eventId) {
+  return checkout({ action: 'cancel_event', event_id: eventId });
+}
+
+/** The banks Paystack can pay a Host into. */
+export function payoutBanks() {
+  return checkout({ action: 'payout_banks' });
+}
+
+/** Add or change the bank account a Host's ticket money is paid into. */
+export function savePayout(details) {
+  return checkout({ action: 'payout_save', ...details });
+}
+
+/** Where the signed-in Host is paid (bank and last 4 digits), or null. */
+export async function getMyPayout(userId) {
+  const client = await getClient();
+  const { data, error } = await client.from('host_payouts').select('business_name, bank_name, account_last4, updated_at').eq('host_id', userId).maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+/** The money side of one of the Host's events: ticket sales, commission, refunds. */
+export async function eventTakings(eventId) {
+  const client = await getClient();
+  const { data, error } = await client.rpc('event_takings', { p_event_id: eventId });
+  if (error) throw error;
+  return Array.isArray(data) ? data[0] : data;
+}
+
+/** Change an event's refund rule (only before any ticket is paid for). */
+export async function setRefundDays(eventId, days) {
+  const client = await getClient();
+  const { error } = await client.rpc('set_refund_days', { p_event_id: eventId, p_days: days });
+  if (error) throw error;
 }
