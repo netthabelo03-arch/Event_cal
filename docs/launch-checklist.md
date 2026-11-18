@@ -18,8 +18,8 @@ Everything here must be done, or decided, before real users are invited. Tick ea
 
 | # | Item | Why | Owner | Done |
 |---|------|-----|-------|------|
-| 7 | Fix D-006: add the Vault entry named `secret_key`; delete the wrongly named entry | Phone reminders are not being sent | You | ☐ |
-| 8 | Turn "Verify JWT" off for `send-reminders`; check the 5-minute job gets a 200 answer | Same | You, Claude checks | ☐ |
+| 7 | Fix D-006: add the Vault entry named `secret_key`; delete the wrongly named entry | Phone reminders are not being sent | You | ☑ |
+| 8 | Turn "Verify JWT" off for `send-reminders`; check the 5-minute job gets a 200 answer | Same | You, Claude checks | ☑ |
 | 9 | Set up a sending domain and switch on email reminders | The email a day before is part of the product | You, then Claude | ☐ |
 
 ## Must do: legal
