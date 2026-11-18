@@ -9,7 +9,9 @@ Everything here must be done, or decided, before real users are invited. Tick ea
 | 1 | Add `PAYSTACK_SECRET_KEY` (live key) in Supabase, Edge Functions, Secrets | Without it no real payment can be taken | You | ☐ |
 | 2 | **Delete** the `PAYMENTS_MODE` secret | While it says `demo` and there is no Paystack key, anyone gets tickets and boosts without paying | You | ☐ |
 | 3 | Turn "Verify JWT" off for `paystack-webhook` and set the webhook URL in Paystack (live) | Paystack must be able to tell the app a payment went through | You | ☐ |
-| 4 | Decide the refund policy and how Hosts are paid out; build payouts and refunds | Promised in the plan for Sprint 6, waiting for real payments | You, then Claude | ☐ |
+| 4 | Decide the refund policy and how Hosts are paid out; build payouts and refunds | Built in Sprint 10 (Host picks the refund window; Paystack split pays Hosts; buyer pays the booking fee). Test with `docs/sprint-10-test-cases.md` | You, then Claude | ☑ |
+| 4a | Decide who covers refunds when a Host has already been paid: Paystack takes refunds from plusespot's balance, not the Host's | A cancelled event after payout means plusespot pays buyers back out of its own money | You | ☐ |
+| 4b | Update the Terms with the refund rules, the 5% commission and the booking fee | Buyers and Hosts must be told | You, then Claude | ☐ |
 | 5 | Confirm the boost prices (now R50, R120, R250) | They are placeholders | You | ☐ |
 | 5a | Tell Hosts that sales stop at 90% of the tickets they offer | They may want to offer more tickets to sell the number they need | You | ☐ |
 | 6 | Make one real R5 purchase and one boost end to end, then refund them | Proves the live keys and the webhook | You | ☐ |
