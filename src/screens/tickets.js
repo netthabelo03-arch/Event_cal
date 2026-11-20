@@ -3,7 +3,7 @@
 // to show at the door.
 
 import { listMyTickets, listMyRefunds, requestRefund } from '../tickets/api.js';
-import { canAskRefund, refundCents, refundDeadline, refundStatusLabel } from '../rules/fees.js';
+import { canAskRefund, refundCents, refundPercent, nextRefundDrop, refundStatusLabel } from '../rules/fees.js';
 import { qrSvg } from '../tickets/qr.js';
 import { eventSales, eventSalesLabel, salesTone, formatRand, moneyErrorMessage } from '../tickets/rules.js';
 import { formatWhen } from '../events/rules.js';
@@ -79,14 +79,17 @@ const DEADLINE = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'nume
 
 /** "Cancel 2 tickets for R200 back", with a second tap to confirm. */
 function refundButton(event, entry, folderBody) {
-  const back = refundCents(entry.order, 'buyer');
+  const percent = refundPercent(event.starts_at, event.refund_days);
+  const back = refundCents(entry.order, 'buyer', percent);
   const count = entry.tickets.length;
   const area = el('div', { class: 'stack refund' });
   const problem = el('p', { class: 'field__error', role: 'alert' });
   problem.hidden = true;
   const ask = el('button', { type: 'button', class: 'button button--quiet button--small', text: `Cancel ${count === 1 ? 'this ticket' : `these ${count} tickets`} for ${formatRand(back)} back` });
-  const deadline = refundDeadline(event.starts_at, event.refund_days);
-  const note = el('p', { class: 'event-row__meta', text: `You can cancel until ${DEADLINE.format(deadline)}. The booking fee is not refunded.` });
+  // The refund shrinks as the event gets close (028): say what it is now and when it drops.
+  const drop = nextRefundDrop(event.starts_at, event.refund_days);
+  const later = drop === null ? '' : drop.percent > 0 ? ` It drops to ${drop.percent}% on ${DEADLINE.format(drop.at)}.` : ` You can cancel until ${DEADLINE.format(drop.at)}.`;
+  const note = el('p', { class: 'event-row__meta', text: `That is ${percent}% of the ticket price.${later} The booking fee is not refunded.` });
   ask.addEventListener('click', () => {
     const sure = el('button', { type: 'button', class: 'button button--danger button--small', text: `Yes, cancel and refund ${formatRand(back)}` });
     const keep = el('button', { type: 'button', class: 'text-link', text: 'Keep my tickets' });
