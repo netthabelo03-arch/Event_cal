@@ -104,11 +104,30 @@ export function shareOfSellable(type) {
   return Math.min(100, Math.floor((type.sold / sellable(type)) * 100));
 }
 
-/** "Sold out", a step such as "85% sold", or '' while under 75%. */
+/** From this share (of what can be sold) until the 75% step, the words say "Selling fast". */
+export const SELLING_FAST_FROM = 50;
+
+/** The words before the first step: "Tickets available", or "Selling fast" from 50%. */
+export function earlyWords(percentOfSellable) {
+  return percentOfSellable >= SELLING_FAST_FROM ? 'Selling fast' : 'Tickets available';
+}
+
+/** "Sold out", a step such as "85% sold", or before 75% "Tickets available" / "Selling fast". */
 export function availabilityLabel(type) {
   if (remaining(type) === 0) return 'Sold out';
-  const step = salesStep(shareOfSellable(type));
-  return step === null ? '' : `${step}% sold`;
+  const share = shareOfSellable(type);
+  const step = salesStep(share);
+  return step === null ? earlyWords(share) : `${step}% sold`;
+}
+
+/**
+ * How full the bar under a ticket type is, in percent: the step when one is
+ * shown, otherwise the real share (the bar carries no number), 100 when sold out.
+ */
+export function meterPercent(type) {
+  if (remaining(type) === 0) return 100;
+  const share = shareOfSellable(type);
+  return salesStep(share) ?? share;
 }
 
 /** Said when the tickets left are all being paid for by other people right now. */
@@ -128,13 +147,21 @@ export function eventSales(types) {
   return { percent: soldOut ? SELL_LIMIT * 100 : Math.min(SELL_LIMIT * 100, Math.floor((sold / offered) * 100)), soldOut };
 }
 
-/** "Sold out", a step such as "85% of tickets sold", or '' (show nothing), for an event. */
+/** "Sold out", a step such as "85% of tickets sold", or before 75% "Tickets available" / "Selling fast", for an event. */
 export function eventSalesLabel(sales) {
   if (!sales) return '';
   if (sales.soldOut) return 'Sold out';
   // sales.percent is of all tickets; steps are of the tickets that can be sold.
-  const step = salesStep(Math.floor((sales.percent * 100) / (SELL_LIMIT * 100)));
-  return step === null ? '' : `${step}% of tickets sold`;
+  const share = Math.floor((sales.percent * 100) / (SELL_LIMIT * 100));
+  const step = salesStep(share);
+  return step === null ? earlyWords(share) : `${step}% of tickets sold`;
+}
+
+/** The chip colour for an event's sales: 'good' (tickets available), 'waiting' (selling fast or a step), 'bad' (sold out). */
+export function salesTone(sales) {
+  if (!sales) return 'good';
+  if (sales.soldOut) return 'bad';
+  return eventSalesLabel(sales) === 'Tickets available' ? 'good' : 'waiting';
 }
 
 /**
