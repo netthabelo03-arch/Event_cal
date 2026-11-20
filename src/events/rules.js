@@ -162,6 +162,15 @@ export function formatWhen(iso) {
 }
 
 /**
+ * Whether tickets can still be bought: until the event ends (or, for an event
+ * saved before end times existed, until it starts).
+ */
+export function ticketsOnSale(event, nowMs) {
+  const until = Date.parse(event.ends_at ?? event.starts_at);
+  return Number.isFinite(until) && until > nowMs;
+}
+
+/**
  * When an event runs: "Fri 4 Dec · 18:00–23:00" on one day,
  * "Fri 4 Dec · 18:00 – Sun 6 Dec · 22:00" over several. Just the start without an end.
  */

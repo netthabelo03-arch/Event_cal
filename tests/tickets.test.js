@@ -316,3 +316,19 @@ test('alerts go out at exactly the steps the app shows (75, 85, 90, 95, then sol
   assert.match(sql, /check \(sales_notice_pct in \(0, 75, 85, 90, 95, 100\)\)/);
   assert.match(readFileSync(new URL('../supabase/functions/send-reminders/index.ts', import.meta.url), 'utf8'), /\.lt\('sales_notice_pct', 100\)/);
 });
+
+test('022: ticket sales stop at the end time, not the start', async () => {
+  const { ticketsOnSale } = await import('../src/events/rules.js');
+  const now = Date.parse('2027-01-16T12:00:00Z');
+  const festival = { starts_at: '2027-01-15T08:00:00Z', ends_at: '2027-01-17T20:00:00Z' };
+  assert.equal(ticketsOnSale(festival, now), true, 'started yesterday, ends tomorrow: still selling');
+  assert.equal(ticketsOnSale({ ...festival, ends_at: '2027-01-16T11:59:00Z' }, now), false, 'ended a minute ago');
+  assert.equal(ticketsOnSale({ starts_at: '2027-01-16T13:00:00Z' }, now), true, 'no end time: until the start');
+  assert.equal(ticketsOnSale({ starts_at: '2027-01-16T11:00:00Z' }, now), false);
+  const sql = readFileSync(new URL('../supabase/022_sales_until_end.sql', import.meta.url), 'utf8');
+  assert.match(sql, /e\.status = 'live' and e\.ends_at > now\(\)/);
+  assert.doesNotMatch(sql, /e\.starts_at > now\(\)/);
+  const dry = readFileSync(new URL('../supabase/tests/022_dryrun.sql', import.meta.url), 'utf8');
+  assert.ok(dry.includes(sql.slice(sql.indexOf('begin;') + 6, sql.lastIndexOf('commit;'))), 'the dry run runs exactly the script');
+  assert.match(readFileSync(new URL('../supabase/functions/send-reminders/index.ts', import.meta.url), 'utf8'), /\.gt\('ends_at', new Date\(now\)\.toISOString\(\)\)/);
+});

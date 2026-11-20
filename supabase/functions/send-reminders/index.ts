@@ -102,7 +102,8 @@ export default {
         .from('events')
         .select('id, title, starts_at, venue, city, host_name, sales_notice_pct, ticket_types(quantity, sold)')
         .eq('status', 'live')
-        .gt('starts_at', new Date(now).toISOString())
+        // Tickets sell until the event ends, so alerts follow until then too (022).
+        .gt('ends_at', new Date(now).toISOString())
         .lt('sales_notice_pct', 100)
         .limit(500);
       for (const event of events ?? []) {
