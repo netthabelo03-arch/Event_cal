@@ -159,3 +159,40 @@ export function salesEmail(event, milestone, holdsTicket, appUrl) {
 </div></body></html>`;
   return { subject: notice.title, text, html };
 }
+
+// ---------------------------------------------------------------------------
+// Disputes (Sprint 11): when an admin answers an Artist's dispute, the Artist
+// is told by phone notification, and by email once email is set up.
+// ---------------------------------------------------------------------------
+
+/** Where an Artist sees their music and disputes. */
+export function myMusicUrl(appUrl) {
+  return `${String(appUrl ?? '').replace(/#.*$/, '').replace(/\/?$/, '/')}#/my-music`;
+}
+
+/**
+ * @param {{ ref: string, outcome: 'taken_down' | 'kept', admin_note?: string, track_title?: string }} dispute
+ */
+export function disputeNotice(dispute, appUrl) {
+  const track = dispute.track_title ? `"${dispute.track_title}"` : 'your track';
+  const note = String(dispute.admin_note ?? '').trim();
+  const body = dispute.outcome === 'taken_down'
+    ? `We took ${track} down so you can correct it. Edit it and send it back for review.`
+    : `${track[0].toUpperCase()}${track.slice(1)} stays live.${note ? ` ${note}` : ''}`;
+  return { title: `Dispute ${dispute.ref} answered`, body: body.slice(0, 240), url: myMusicUrl(appUrl) };
+}
+
+export function disputeEmail(dispute, appUrl) {
+  const notice = disputeNotice(dispute, appUrl);
+  const text = [notice.title, notice.body, '', `See your music: ${notice.url}`, '',
+    'You get this email because you filed a dispute in plusespot.'].join('\n');
+  const html = `<!doctype html><html><body style="margin:0;padding:24px;background:#0a0a0a;color:#fafafa;font-family:Arial,sans-serif">
+<div style="max-width:480px;margin:0 auto">
+<p style="color:#4ade80;font-weight:bold;margin:0 0 8px">plusespot</p>
+<h1 style="font-size:22px;margin:0 0 12px">${escapeHtml(notice.title)}</h1>
+<p style="margin:0 0 16px">${escapeHtml(notice.body)}</p>
+<p style="margin:16px 0"><a href="${escapeHtml(notice.url)}" style="display:inline-block;padding:12px 20px;background:#22c55e;color:#0a0a0a;font-weight:bold;text-decoration:none;border-radius:999px">See your music</a></p>
+<p style="font-size:12px;color:#a3a3a3">You get this email because you filed a dispute.</p>
+</div></body></html>`;
+  return { subject: notice.title, text, html };
+}

@@ -1,10 +1,12 @@
 // Promote an event: a host uploads a clip of at most 30 seconds and fills in
 // the event's details. The event then waits for an admin to approve it.
+// The same form, opened with an event's id (#/edit-event/<id>), edits an event
+// that was not approved and sends it back for review.
 
 import { MAX_CLIP_SECONDS, PREVIEW_SECONDS } from '../rules/clip.js';
-import { CATEGORIES, CLIP_TYPES, checkClip, checkEvent } from '../events/rules.js';
-import { createEvent } from '../events/api.js';
-import { addTicketTypes } from '../tickets/api.js';
+import { CATEGORIES, CLIP_TYPES, checkClip, checkEvent, johannesburgParts } from '../events/rules.js';
+import { createEvent, getEvent, resubmitEvent } from '../events/api.js';
+import { addTicketTypes, listTicketTypes } from '../tickets/api.js';
 import { ticketEditor } from '../tickets/editor.js';
 import { REFUND_CHOICES } from '../rules/fees.js';
 import { friendlyAuthError } from '../auth/errors.js';
@@ -44,7 +46,26 @@ function errorLine() {
   };
 }
 
-export async function renderNewEvent({ session, navigate }) {
+/** Plain words for what can go wrong when sending an event back. */
+export function resubmitMessage(error) {
+  const text = `${error?.message ?? ''} ${error?.code ?? ''}`;
+  if (text.includes('not_rejected')) return 'This event is no longer waiting for changes. Open My events to see where it stands.';
+  if (text.includes('start_in_past')) return 'The event must start in the future.';
+  if (text.includes('has_orders')) return 'Tickets were already ordered for this event, so it cannot be changed here. Ask an admin for help.';
+  if (text.includes('not_your_event')) return 'This event is not yours to edit.';
+  return friendlyAuthError(error);
+}
+
+/** Ticket types as the editor shows them: price in rands. */
+function editorRows(types) {
+  return types.map((type) => ({
+    name: type.name,
+    price: type.price_cents === 0 ? '0' : String(type.price_cents / 100),
+    quantity: String(type.quantity),
+  }));
+}
+
+export async function renderNewEvent({ session, id = null }) {
   const { profile, admin } = await loadViewer(session);
   const back = linkTo('#/my-events', 'Back to my events');
   back.className = 'text-link';
@@ -56,18 +77,40 @@ export async function renderNewEvent({ session, navigate }) {
       el('p', { class: 'link-row' }, [linkTo('#/profile', 'Switch to Host in your profile')])];
   }
 
+  // Editing: only the Host's own event, only while it is not approved.
+  let editing = null;
+  let editingTypes = [];
+  if (id) {
+    try {
+      editing = await getEvent(id);
+      if (editing) editingTypes = await listTicketTypes(id);
+    } catch (error) {
+      return [bar, back, heading, el('p', { class: 'message message--error', role: 'alert', text: friendlyAuthError(error) })];
+    }
+    if (!editing || editing.host_id !== session.user.id) {
+      return [bar, back, heading, el('p', { class: 'notice', text: 'This event is not yours to edit.' })];
+    }
+    if (editing.status !== 'rejected') {
+      return [bar, back, heading, el('p', { class: 'notice', text: editing.status === 'live' ? 'This event is live. Only events that were not approved can be edited.' : 'This event is already waiting for review.' })];
+    }
+    heading.textContent = 'Edit and send back';
+  }
+
   // Clip
   let clipFile = null;
   let clipSeconds = null;
   const clipInput = el('input', { id: 'clip', type: 'file', accept: Object.keys(CLIP_TYPES).join(','), class: 'file-input' });
-  const clipStatus = el('p', { class: 'field__hint', text: `The first ${PREVIEW_SECONDS} seconds is what people see in the feed. Put your hook there.` });
+  const clipStatus = el('p', { class: 'field__hint', text: editing ? 'Your current clip is kept unless you choose a new one.' : `The first ${PREVIEW_SECONDS} seconds is what people see in the feed. Put your hook there.` });
   const shapeHint = el('p', { class: 'field__hint', text: 'Tip: film upright (portrait), like a normal phone video, so your clip fills the whole screen in the feed. Clips filmed sideways are shown whole, with a blurred fill above and below.' });
   const clipError = errorLine();
   clipInput.addEventListener('change', async () => {
     clipFile = clipInput.files[0] ?? null;
     clipSeconds = null;
     clipError.set(null);
-    if (!clipFile) return;
+    if (!clipFile) {
+      if (editing) clipStatus.textContent = 'Your current clip is kept unless you choose a new one.';
+      return;
+    }
     clipStatus.textContent = 'Checking the clip…';
     clipSeconds = await readDuration(clipFile);
     const problem = checkClip(clipFile, clipSeconds);
@@ -98,7 +141,7 @@ export async function renderNewEvent({ session, navigate }) {
   const description = el('textarea', { id: 'description', class: 'input input--area', rows: '4' });
   const descriptionError = errorLine();
 
-  const tickets = ticketEditor();
+  const tickets = ticketEditor(editing ? { initial: editorRows(editingTypes) } : {});
 
   // Refunds: the Host decides, per event, until when buyers can cancel.
   let refundDays = null;
@@ -117,11 +160,26 @@ export async function renderNewEvent({ session, navigate }) {
   ]);
 
   const message = messageBox();
-  const submit = el('button', { type: 'submit', class: 'button button--primary', text: 'Submit for review' });
+  const submit = el('button', { type: 'submit', class: 'button button--primary', text: editing ? 'Send back for review' : 'Submit for review' });
+
+  // Editing: fill in what the event has now.
+  if (editing) {
+    const when = johannesburgParts(editing.starts_at);
+    title.input.value = editing.title;
+    date.input.value = when.date;
+    time.input.value = when.time;
+    venue.input.value = editing.venue;
+    description.value = editing.description ?? '';
+    category = editing.category;
+    categoryButtons.forEach((button, i) => button.setAttribute('aria-pressed', String(CATEGORIES[i].id === category)));
+    refundDays = editing.refund_days ?? null;
+    refundButtons.forEach((button, i) => button.setAttribute('aria-pressed', String(REFUND_CHOICES[i].days === refundDays)));
+  }
 
   const form = el('form', { class: 'form', novalidate: '' }, [
+    ...(editing ? [el('p', { class: 'message message--error', text: editing.reject_reason ? `Not approved: ${editing.reject_reason}` : 'This event was not approved.' })] : []),
     el('div', { class: 'field' }, [
-      el('label', { for: 'clip', class: 'field__label', text: `Promo video (at most ${MAX_CLIP_SECONDS} seconds)` }),
+      el('label', { for: 'clip', class: 'field__label', text: editing ? `New promo video (optional, at most ${MAX_CLIP_SECONDS} seconds)` : `Promo video (at most ${MAX_CLIP_SECONDS} seconds)` }),
       shapeHint, clipInput, clipStatus, clipError.node,
     ]),
     title.node,
@@ -157,7 +215,7 @@ export async function renderNewEvent({ session, navigate }) {
       clipSeconds,
       refundDays,
     };
-    const { ok, errors } = checkEvent(values, Date.now());
+    const { ok, errors } = checkEvent(values, Date.now(), { clipOptional: editing !== null });
     clipError.set(errors.clip ?? null);
     title.setError(errors.title ?? null);
     startError.set(errors.start ?? null);
@@ -170,7 +228,22 @@ export async function renderNewEvent({ session, navigate }) {
       return;
     }
 
-    await whileBusy(submit, 'Uploading your clip…', async () => {
+    await whileBusy(submit, clipFile ? 'Uploading your clip…' : 'Sending…', async () => {
+      if (editing) {
+        try {
+          await resubmitEvent(session.user.id, editing.id, values, ticketCheck.types);
+          heading.textContent = 'Your event is sent back for review';
+          form.replaceWith(
+            el('div', { class: 'stack' }, [
+              el('p', { class: 'lead', text: 'We will look at it again, then it goes live in Discover. You can follow its status in My events.' }),
+              el('a', { href: '#/my-events', class: 'button button--primary', text: 'Go to my events' }),
+            ]),
+          );
+        } catch (error) {
+          message.show(resubmitMessage(error));
+        }
+        return;
+      }
       try {
         const saved = await createEvent(session.user.id, profile.full_name, values);
         let ticketNote = '';

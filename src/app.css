@@ -1001,3 +1001,43 @@ body.full .app { max-width: none; padding: 0; gap: 0; }
 .sold-meter__label--held { color: var(--color-warning); }
 .notice--warning { border-color: var(--color-warning); }
 .refund { margin-top: var(--space-2, 0.5rem); }
+
+/* Sprint 11: the words over a clip take their colours from the clip (src/events/palette.js).
+   The fade under the text is a dark shade of the clip's own colours, stronger when the
+   clip is bright; the Host's name and highlights use the clip's most vivid colour, made
+   light enough to read. Colours glide when the clip changes. Without them (old browsers,
+   or before the first frame) the earlier black fade and green stay. */
+@property --clip-accent { syntax: '<color>'; inherits: true; initial-value: rgb(110 231 168); }
+@property --clip-scrim { syntax: '<color>'; inherits: true; initial-value: rgb(0 0 0); }
+@property --clip-strength { syntax: '<percentage>'; inherits: true; initial-value: 85%; }
+.has-clip-colours { transition: --clip-accent 0.7s ease, --clip-scrim 0.7s ease, --clip-strength 0.7s ease; }
+@supports (background: color-mix(in srgb, red 50%, transparent)) {
+  .feed__slide.has-clip-colours .feed__info {
+    background: linear-gradient(transparent, color-mix(in srgb, var(--clip-scrim) calc(var(--clip-strength) * 0.6), transparent) 35%, color-mix(in srgb, var(--clip-scrim) var(--clip-strength), transparent));
+    text-shadow: 0 1px 3px color-mix(in srgb, var(--clip-scrim) 70%, transparent);
+  }
+  .player.has-clip-colours .player__shade {
+    background: linear-gradient(color-mix(in srgb, var(--clip-scrim) 35%, transparent), transparent 22%, transparent 45%, color-mix(in srgb, var(--clip-scrim) var(--clip-strength), transparent));
+  }
+}
+.feed__slide.has-clip-colours .feed__host,
+.feed__slide.has-clip-colours .feed__cta,
+.player.has-clip-colours .player__info .caption { color: var(--clip-accent); }
+.feed__slide.has-clip-colours .feed__promoted { background: var(--clip-accent); color: var(--clip-scrim); }
+.feed__slide.has-clip-colours .feed__meta { color: rgb(255 255 255 / 0.86); }
+.player.has-clip-colours .player__button { background: var(--clip-accent); color: var(--clip-scrim); }
+@media (prefers-reduced-motion: reduce) { .has-clip-colours { transition: none; } }
+
+/* Sprint 11: Trending this week, a ranked grid on Discover. */
+.trending { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (min-width: 720px) { .trending { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.card--trending { position: relative; width: auto; }
+.card__rank {
+  position: absolute; top: 8px; left: 8px; z-index: 1;
+  min-width: 30px; height: 30px; padding: 0 8px; border-radius: 15px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-heading); font-weight: 800; font-size: 16px;
+  background: var(--color-accent); color: var(--color-on-accent);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.5);
+}
+.card__trend { color: var(--color-accent-hover); }

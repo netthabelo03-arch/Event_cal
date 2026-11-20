@@ -2,7 +2,8 @@
 // Called every 5 minutes by pg_cron (see supabase/005_schedule_reminders.sql)
 // with the project's secret key. Sends the reminder email a day before each
 // event, and the phone notification two hours before. It also tells people who
-// set a reminder or hold a ticket when an event passes 50%, 75% and sold out.
+// set a reminder or hold a ticket when an event passes 50%, 75% and sold out,
+// and tells an Artist when their dispute is answered.
 //
 // Secrets to set under Edge Functions, Secrets:
 //   RESEND_API_KEY     the email service's API key
@@ -14,7 +15,7 @@
 
 import { withSupabase } from 'npm:@supabase/server@^1';
 import webpush from 'npm:web-push@3.6.7';
-import { dueKinds, emailContent, pushPayload, EMAIL_BEFORE_MS, eventSales, salesMilestone, salesNotice, salesEmail } from './schedule.js';
+import { dueKinds, emailContent, pushPayload, EMAIL_BEFORE_MS, eventSales, salesMilestone, salesNotice, salesEmail, disputeNotice, disputeEmail } from './schedule.js';
 
 const env = (name) => Deno.env.get(name) ?? '';
 
@@ -146,6 +147,52 @@ export default {
             } catch (problem) {
               result.failures.push(`sales email ${event.id}: ${problem.message}`);
             }
+          }
+        }
+      }
+    }
+
+    // Disputes answered by an admin: tell the Artist once (Sprint 11).
+    result.disputeNotices = 0;
+    if (pushReady || emailReady) {
+      const { data: answered } = await db
+        .from('track_disputes')
+        .select('id, ref, outcome, admin_note, artist_id, tracks(title)')
+        .eq('status', 'resolved')
+        .is('artist_notified_at', null)
+        .gt('resolved_at', new Date(now - 7 * 24 * 60 * 60 * 1000).toISOString())
+        .limit(200);
+      for (const dispute of answered ?? []) {
+        // Claim it first, so two runs at once cannot both send it.
+        const { data: claimed } = await db.from('track_disputes').update({ artist_notified_at: new Date().toISOString() })
+          .eq('id', dispute.id).is('artist_notified_at', null).select('id');
+        if (!claimed?.length) continue;
+        const details = { ...dispute, track_title: dispute.tracks?.title ?? '' };
+        if (pushReady) {
+          const { data: devices } = await db.from('push_subscriptions').select('id, endpoint, p256dh, auth').eq('user_id', dispute.artist_id);
+          const payload = JSON.stringify(disputeNotice(details, env('APP_URL')));
+          for (const device of devices ?? []) {
+            try {
+              await webpush.sendNotification({ endpoint: device.endpoint, keys: { p256dh: device.p256dh, auth: device.auth } }, payload, { TTL: 24 * 3600 });
+              result.disputeNotices += 1;
+            } catch (problem) {
+              if (problem.statusCode === 404 || problem.statusCode === 410) {
+                await db.from('push_subscriptions').delete().eq('id', device.id);
+              } else {
+                result.failures.push(`dispute push ${dispute.ref}: ${problem.statusCode ?? problem.message}`);
+              }
+            }
+          }
+        }
+        if (emailReady) {
+          try {
+            const { data: user } = await db.auth.admin.getUserById(dispute.artist_id);
+            if (user?.user?.email) {
+              await sendEmail(user.user.email, disputeEmail(details, env('APP_URL')));
+              result.disputeNotices += 1;
+            }
+          } catch (problem) {
+            result.failures.push(`dispute email ${dispute.ref}: ${problem.message}`);
           }
         }
       }

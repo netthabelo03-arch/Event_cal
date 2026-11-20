@@ -32,9 +32,9 @@ function videoMayMove() {
 export function trackPlayer({ audioSrc, videoSrc, title, seconds = null, info = [], backHref = null, next = null }) {
   const moving = videoMayMove();
   const video = el('video', { class: 'player__video', playsinline: '', preload: 'auto', 'aria-hidden': 'true', tabindex: '-1' });
+  video.crossOrigin = 'anonymous';
   video.src = videoSrc;
   const backdrop = el('canvas', { class: 'feed__backdrop player__backdrop', width: '36', height: '64', 'aria-hidden': 'true' });
-  attachBackdrop(video, backdrop);
 
   // "sound" is what the person hears and what the controls drive.
   let sound;
@@ -136,6 +136,8 @@ export function trackPlayer({ audioSrc, videoSrc, title, seconds = null, info = 
     ]),
     ...(sound === video ? [] : [sound]),
   ]);
+  // The words and controls take their colours from the video behind them.
+  attachBackdrop(video, backdrop, { colourTarget: node });
   // Leaving the page stops the music.
   const onLeave = () => setTimeout(() => {
     if (node.isConnected) return;

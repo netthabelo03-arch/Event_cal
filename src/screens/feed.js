@@ -14,11 +14,12 @@ const SEARCH = '<circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></p
 async function slide(event) {
   const video = el('video', { class: 'feed__video', muted: '', playsinline: '', preload: 'metadata', 'aria-hidden': 'true' });
   video.muted = true;
+  // Lets the page read the clip's colours (the storage server allows it).
+  video.crossOrigin = 'anonymous';
   video.src = await clipUrl(event.clip_path);
   // A blurred copy of the clip fills the screen behind it, so the clip itself
   // is shown whole (never cut) whatever its shape.
   const backdrop = el('canvas', { class: 'feed__backdrop', width: '36', height: '64', 'aria-hidden': 'true' });
-  attachBackdrop(video, backdrop);
   const node = el('a', { class: 'feed__slide', href: hashFor({ screen: 'detail', kind: 'event', id: event.id }) }, [
     backdrop,
     video,
@@ -30,6 +31,8 @@ async function slide(event) {
       el('span', { class: 'feed__cta', text: 'Tap for details and the full clip' }),
     ]),
   ]);
+  // The words take their colours from the clip behind them.
+  attachBackdrop(video, backdrop, { colourTarget: node });
   return { node, video };
 }
 

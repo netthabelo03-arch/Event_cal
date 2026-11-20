@@ -4,6 +4,7 @@
 
 import { PREVIEW_SECONDS } from '../rules/clip.js';
 import { nextIndex, mayAutoplay } from './preview.js';
+import { clipColours, colourStyles, coloursChanged } from './palette.js';
 
 function deviceAllowsAutoplay() {
   const reducedMotion = typeof window.matchMedia === 'function'
@@ -94,34 +95,63 @@ export function coverCrop(videoWidth, videoHeight, targetWidth, targetHeight) {
  * Paint a tiny copy of the video onto a canvas, which the page blurs and
  * stretches behind the clip. It repaints about ten times a second while the
  * clip plays and stops when it pauses. The canvas is small, so this is cheap.
+ *
+ * With `colourTarget`, about once a second it also takes the clip's colours
+ * from that tiny copy and sets them on the element (see palette.js), so the
+ * words over the clip match it. The video must be loaded with
+ * crossOrigin="anonymous" for this; otherwise the colours stay as they are.
  */
-export function attachBackdrop(video, canvas) {
-  const context = canvas.getContext?.('2d');
+export function attachBackdrop(video, canvas, { colourTarget = null } = {}) {
+  const context = canvas.getContext?.('2d', { willReadFrequently: Boolean(colourTarget) });
   if (!context) return;
   let painting = false;
   let last = 0;
+  let lastColours = 0;
+  let shown = null;
+  let canRead = Boolean(colourTarget);
 
-  function paint() {
+  function takeColours(time) {
+    if (!canRead || time - lastColours < 900) return;
+    lastColours = time;
+    try {
+      const frame = context.getImageData(0, 0, canvas.width, canvas.height);
+      const colours = clipColours(frame.data, canvas.width, canvas.height);
+      if (!coloursChanged(shown, colours)) return;
+      shown = colours;
+      for (const [name, value] of Object.entries(colourStyles(colours))) colourTarget.style.setProperty(name, value);
+      colourTarget.classList.add('has-clip-colours');
+    } catch {
+      // The video's server did not allow reading its pixels: keep the house colours.
+      canRead = false;
+    }
+  }
+
+  function paint(time = performance.now()) {
     const crop = coverCrop(video.videoWidth, video.videoHeight, canvas.width, canvas.height);
     if (!crop) return;
     try {
       context.drawImage(video, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, canvas.width, canvas.height);
     } catch {
       // A frame that is not ready yet: try again on the next tick.
+      return;
     }
+    takeColours(time);
   }
 
   function loop(time) {
     if (!painting) return;
     if (time - last > 100) {
-      paint();
+      paint(time);
       last = time;
     }
     requestAnimationFrame(loop);
   }
 
-  // The first frame, so a clip that is not playing yet still has its backdrop.
-  video.addEventListener('loadeddata', paint);
+  // The first frame, so a clip that is not playing yet still has its backdrop (and colours).
+  video.addEventListener('loadeddata', () => {
+    lastColours = -Infinity;
+    paint();
+  });
   video.addEventListener('play', () => {
     if (painting) return;
     painting = true;
@@ -130,5 +160,10 @@ export function attachBackdrop(video, canvas) {
   video.addEventListener('pause', () => {
     painting = false;
     paint();
+  });
+  // A new clip in the same player: take its colours straight away.
+  video.addEventListener('emptied', () => {
+    shown = null;
+    lastColours = -Infinity;
   });
 }
