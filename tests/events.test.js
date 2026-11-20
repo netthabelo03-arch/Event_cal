@@ -112,3 +112,13 @@ test('database and storage errors get a clear message', () => {
   assert.match(friendlyAuthError({ message: 'mime type image/png is not supported' }), /MP4, WebM or MOV/);
   assert.equal(friendlyAuthError({ code: 'review_not_applied' }), 'That event has already been reviewed.');
 });
+
+test('020: an event leaves public view the day after it happens; Host, Admins and ticket holders still see it', async () => {
+  const { readFileSync } = await import('node:fs');
+  const sql = readFileSync(new URL('../supabase/020_events_private_after.sql', import.meta.url), 'utf8');
+  assert.match(sql, /using \(status = 'live' and public\.event_still_public\(starts_at\)\)/);
+  assert.match(sql, /at time zone 'Africa\/Johannesburg'\)::date\s+>= \(now\(\) at time zone 'Africa\/Johannesburg'\)::date/);
+  assert.match(sql, /create policy "Ticket holders can see their events"[\s\S]*using \(public\.holds_ticket_for\(id\)\)/);
+  assert.match(sql, /security definer/);
+  assert.doesNotMatch(sql, /delete from public\.events/);
+});
