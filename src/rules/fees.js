@@ -78,6 +78,39 @@ export function refundDeadline(startsAt, days) {
   return new Date(start - days * 24 * 60 * 60 * 1000);
 }
 
+/** "Thu 19 Nov · 15:05" in Johannesburg time (kept here so this file needs no other imports). */
+function when(date) {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-ZA', {
+    weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: 'Africa/Johannesburg',
+  }).formatToParts(date).map((part) => [part.type, part.value]));
+  return `${parts.weekday} ${parts.day} ${parts.month} · ${parts.hour}:${parts.minute}`;
+}
+
+/**
+ * What a buyer is told about refunds before paying.
+ * @returns {{ tone: 'good' | 'bad', text: string }}
+ */
+export function refundNotice(event, nowMs = Date.now()) {
+  const deadline = refundDeadline(event?.starts_at, event?.refund_days);
+  if (deadline === null) return { tone: 'bad', text: 'No refunds for these tickets.' };
+  if (nowMs >= deadline.getTime()) {
+    return { tone: 'bad', text: `No refunds for these tickets: refunds for this event closed on ${when(deadline)}.` };
+  }
+  return { tone: 'good', text: `Refunds until ${when(deadline)} (booking fee not refunded).` };
+}
+
+/**
+ * A warning for the Host when the refund rule they picked is already closed
+ * for the start they chose (say "1 day before" for an event starting tonight).
+ * @param {string | null} startIso the start from the form, or null if not filled in yet
+ * @returns {string | null}
+ */
+export function refundRuleWarning(startIso, days, nowMs = Date.now()) {
+  const deadline = refundDeadline(startIso, days);
+  if (deadline === null || nowMs < deadline.getTime()) return null;
+  return `With "${REFUND_CHOICES.find((choice) => choice.days === days)?.label ?? `Until ${days} days before`}", refunds would already be closed (they ended ${when(deadline)}), so no buyer could get a refund. Choose a shorter time or "No refunds".`;
+}
+
 /**
  * Whether a buyer may ask for their money back for an order now. The
  * database checks the same things (public.request_refund).
