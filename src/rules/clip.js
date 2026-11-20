@@ -4,8 +4,11 @@
 /** Longest clip a host or artist may upload, in seconds. */
 export const MAX_CLIP_SECONDS = 30;
 
-/** How long a clip auto-plays in the Discover feed before the next one, in seconds. */
+/** How long a clip auto-plays in a Discover row before the next card, in seconds. */
 export const PREVIEW_SECONDS = 5;
+
+/** How long each clip or track plays in the full-screen feed before the next one, in seconds. */
+export const FEED_SECONDS = 10;
 
 /**
  * Check an uploaded clip's length against the 30-second limit.

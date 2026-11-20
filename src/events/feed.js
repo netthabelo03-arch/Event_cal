@@ -1,8 +1,9 @@
-// The full-screen feed: one clip at a time. Each clip plays muted for its
-// preview seconds, then the feed moves on to the next by itself. Scrolling
-// by hand works too: whichever clip is on screen plays.
+// The full-screen feed: one clip at a time. Each clip plays muted for
+// FEED_SECONDS, then the feed moves on to the next by itself. Scrolling
+// by hand works too: whichever clip is on screen plays. The feed has more
+// than one section (Events, Music); only the section on screen plays.
 
-import { PREVIEW_SECONDS } from '../rules/clip.js';
+import { FEED_SECONDS } from '../rules/clip.js';
 import { nextIndex, mayAutoplay } from './preview.js';
 import { clipColours, colourStyles, coloursChanged } from './palette.js';
 
@@ -15,16 +16,21 @@ function deviceAllowsAutoplay() {
 /**
  * @param {HTMLElement} container the scrolling element
  * @param {{ node: HTMLElement, video: HTMLVideoElement }[]} slides in order
- * @returns {boolean} whether the feed plays by itself on this device
+ * @param {{ active?: boolean, onPlay?: (index: number) => void, onStop?: () => void }} options
+ *   active: whether this section is on screen at the start;
+ *   onPlay / onStop: told when a slide starts and when playing stops (the Music section plays the sound)
+ * @returns {{ setActive: (on: boolean) => void } | null} null when the feed does not play by itself on this device
  */
-export function startFeed(container, slides) {
-  if (slides.length === 0 || !deviceAllowsAutoplay() || typeof IntersectionObserver !== 'function') return false;
+export function startFeed(container, slides, { active = true, onPlay = () => {}, onStop = () => {} } = {}) {
+  if (slides.length === 0 || !deviceAllowsAutoplay() || typeof IntersectionObserver !== 'function') return null;
   let current = -1;
   let timer = null;
+  let on = active;
 
   function stop() {
     clearTimeout(timer);
     for (const slide of slides) slide.video.pause();
+    onStop();
   }
 
   function activate(index) {
@@ -33,14 +39,16 @@ export function startFeed(container, slides) {
       return;
     }
     current = index;
+    if (!on) return;
     slides.forEach((slide, i) => {
       if (i !== index) slide.video.pause();
     });
     const video = slides[index].video;
     video.currentTime = 0;
     video.play().catch(() => {});
+    onPlay(index);
     clearTimeout(timer);
-    timer = setTimeout(advance, PREVIEW_SECONDS * 1000);
+    timer = setTimeout(advance, FEED_SECONDS * 1000);
   }
 
   function advance() {
@@ -71,7 +79,14 @@ export function startFeed(container, slides) {
     }
   }, { root: container, threshold: 0.6 });
   for (const slide of slides) observer.observe(slide.node);
-  return true;
+  return {
+    setActive(value) {
+      if (value === on) return;
+      on = value;
+      if (on) activate(current === -1 ? 0 : current);
+      else stop();
+    },
+  };
 }
 
 /**
