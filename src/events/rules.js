@@ -162,6 +162,47 @@ export function formatWhen(iso) {
 }
 
 /**
+ * Check a Host's request to extend an event (026): a later end, within 31 days
+ * of the start, with a reason for the Admin.
+ * @param {{ starts_at: string, ends_at: string }} event
+ * @returns {string | null}
+ */
+export function checkExtension(event, date, time, reason) {
+  if (!date || !time) return 'Choose the new end date and time.';
+  const iso = startsAtIso(date, time);
+  if (iso === null) return 'Enter a real date and time.';
+  const end = Date.parse(iso);
+  if (end <= Date.parse(event.ends_at)) return 'Choose a time after the current end. Events can only be extended.';
+  if (end - Date.parse(event.starts_at) > MAX_EVENT_DAYS * 24 * 3600 * 1000) return `An event can run for at most ${MAX_EVENT_DAYS} days.`;
+  if (String(reason ?? '').trim().length < 5) return 'Tell the admin why the event needs more time.';
+  return null;
+}
+
+/** Plain words for what the server says about an extension request. */
+export function extensionMessage(error) {
+  const text = `${error?.message ?? ''} ${error?.code ?? ''}`;
+  if (text.includes('already_asked')) return 'You already asked to extend this event. Wait for the admin\'s answer.';
+  if (text.includes('not_later')) return 'Choose a time after the current end. Events can only be extended.';
+  if (text.includes('too_long')) return `An event can run for at most ${MAX_EVENT_DAYS} days.`;
+  if (text.includes('no_reason')) return 'Tell the admin why the event needs more time.';
+  if (text.includes('event_over')) return 'This event has already ended.';
+  if (text.includes('not_changeable')) return 'This event can no longer be changed.';
+  if (text.includes('not_your_event')) return 'This event is not yours to change.';
+  if (text.includes('note_needed')) return 'Tell the host why the request is declined.';
+  if (text.includes('not_pending')) return 'This request was already answered.';
+  return 'That did not go through. Check your connection and try again.';
+}
+
+/** What a Host sees about their latest extension request, or null if there is none to show. */
+export function extensionStatus(request) {
+  if (!request) return null;
+  const until = formatWhen(request.requested_ends_at);
+  if (request.status === 'pending') return { tone: 'waiting', text: `Asked to extend until ${until}. Waiting for an admin.` };
+  if (request.status === 'declined') return { tone: 'bad', text: `Extension until ${until} not approved${request.decision_note ? `: ${request.decision_note}` : '.'}` };
+  return { tone: 'good', text: `Extension approved: now ends ${until}.` };
+}
+
+/**
  * Whether tickets can still be bought: until the event ends (or, for an event
  * saved before end times existed, until it starts).
  */

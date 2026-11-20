@@ -210,3 +210,38 @@ async function promotedNow(client) {
     return [];
   }
 }
+
+/** Ask an Admin to extend the Host's own event (026). @returns {Promise<string>} the request id */
+export async function requestEventEnd(eventId, endsAtIso, reason) {
+  const client = await getClient();
+  const { data, error } = await client.rpc('request_event_end', { p_event_id: eventId, p_ends_at: endsAtIso, p_reason: reason });
+  if (error) throw error;
+  return data;
+}
+
+/** The newest extension request for an event (the Host's own, or any for an Admin), or null. */
+export async function latestEndRequest(eventId) {
+  const client = await getClient();
+  const { data, error } = await client.from('event_end_requests')
+    .select('id, status, requested_ends_at, current_ends_at, reason, decision_note, created_at')
+    .eq('event_id', eventId).order('created_at', { ascending: false }).limit(1).maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+/** Open extension requests for the Admin review queue, oldest first. */
+export async function listEndRequests() {
+  const client = await getClient();
+  const { data, error } = await client.from('event_end_requests')
+    .select('id, event_id, current_ends_at, requested_ends_at, reason, created_at, events(id, title, host_name, starts_at, ends_at, venue)')
+    .eq('status', 'pending').order('created_at', { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
+/** An Admin approves (the end time moves) or declines (with a note) an extension request. */
+export async function decideEndRequest(requestId, { approve, note = '' }) {
+  const client = await getClient();
+  const { error } = await client.rpc('decide_event_end', { p_request_id: requestId, p_approve: approve, p_note: note });
+  if (error) throw error;
+}

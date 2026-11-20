@@ -154,3 +154,29 @@ test('021: events have an end date and time and leave public view exactly then',
   assert.match(api, /ends_at: startsAtIso\(form\.endDate, form\.endTime\)/);
   assert.match(api, /p_ends_at: startsAtIso\(form\.endDate, form\.endTime\)/);
 });
+
+test('026: a Host asks to extend an event; only an Admin approval moves the end time', async () => {
+  const { checkExtension, extensionMessage, extensionStatus } = await import('../src/events/rules.js');
+  const event = { starts_at: '2027-01-15T08:00:00Z', ends_at: '2027-01-15T20:00:00Z' };
+  assert.equal(checkExtension(event, '2027-01-17', '22:00', 'The festival adds two days'), null);
+  assert.match(checkExtension(event, '2027-01-15', '18:00', 'Shorter'), /only be extended/);
+  assert.match(checkExtension(event, '2027-01-15', '22:00', 'Shorter'), /only be extended/, '22:00 Johannesburg is 20:00 UTC, the current end');
+  assert.match(checkExtension(event, '2027-02-16', '10:00', 'Long one'), /at most 31 days/);
+  assert.match(checkExtension(event, '2027-01-17', '22:00', ' ok '), /why the event needs more time/);
+  assert.match(checkExtension(event, '', '', 'reason here'), /Choose/);
+  assert.match(extensionMessage({ message: 'already_asked' }), /already asked/);
+  assert.match(extensionMessage({ message: 'note_needed' }), /why the request is declined/);
+  assert.match(extensionMessage({}), /did not go through/);
+  assert.equal(extensionStatus(null), null);
+  assert.deepEqual(extensionStatus({ status: 'pending', requested_ends_at: '2027-01-17T20:00:00Z' }), { tone: 'waiting', text: 'Asked to extend until Sun 17 Jan · 22:00. Waiting for an admin.' });
+  assert.equal(extensionStatus({ status: 'declined', requested_ends_at: '2027-01-17T20:00:00Z', decision_note: 'Venue booked' }).text, 'Extension until Sun 17 Jan · 22:00 not approved: Venue booked');
+  assert.equal(extensionStatus({ status: 'approved', requested_ends_at: '2027-01-17T20:00:00Z' }).tone, 'good');
+  const { readFileSync } = await import('node:fs');
+  const sql = readFileSync(new URL('../supabase/026_end_time_requests.sql', import.meta.url), 'utf8');
+  assert.match(sql, /if not public\.is_admin\(\) then raise exception 'not_admin'/);
+  assert.match(sql, /if p_ends_at is null or p_ends_at <= e\.ends_at then raise exception 'not_later'/);
+  assert.match(sql, /create unique index if not exists event_end_requests_one_open on public\.event_end_requests \(event_id\) where status = 'pending'/);
+  assert.doesNotMatch(sql, /set_event_end/, 'Hosts cannot change it directly');
+  const dry = readFileSync(new URL('../supabase/tests/026_dryrun.sql', import.meta.url), 'utf8');
+  assert.ok(dry.includes(sql.slice(sql.indexOf('begin;') + 6, sql.lastIndexOf('commit;'))));
+});

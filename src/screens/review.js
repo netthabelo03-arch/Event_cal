@@ -1,12 +1,12 @@
 // Review queue: an admin watches each submitted clip and approves or rejects
 // the event. Approved events go live in Discover.
 
-import { listReviewQueue, reviewEvent, clipUrl } from '../events/api.js';
+import { listReviewQueue, reviewEvent, clipUrl, listEndRequests, decideEndRequest } from '../events/api.js';
 import { listTrackQueue, reviewTrack, audioUrl } from '../music/api.js';
 import { genreName, formatTime, MAX_AUDIO_SECONDS } from '../music/rules.js';
 import { listOpenDisputes, resolveDispute, isOverdue, disputeErrorMessage } from '../music/disputes.js';
 import { listOpenReports, resolveReport } from '../reports/reports.js';
-import { CATEGORIES, formatWhen, formatWhenRange } from '../events/rules.js';
+import { CATEGORIES, formatWhen, formatWhenRange, extensionMessage } from '../events/rules.js';
 import { MAX_CLIP_SECONDS } from '../rules/clip.js';
 import { friendlyAuthError } from '../auth/errors.js';
 import { loadViewer } from '../viewer.js';
@@ -214,6 +214,50 @@ async function reviewCard(event, onDone) {
   return card;
 }
 
+/** A Host's request to extend an event: approve (the end moves) or decline with a note. */
+function extensionCard(request, onDone) {
+  const event = request.events ?? {};
+  const note = el('input', { id: `ext-note-${request.id}`, type: 'text', class: 'input', maxlength: '300' });
+  const error = el('p', { class: 'field__error', role: 'alert' });
+  error.hidden = true;
+  const approve = el('button', { type: 'button', class: 'button button--primary', text: 'Approve' });
+  const decline = el('button', { type: 'button', class: 'button button--quiet', text: 'Decline' });
+  const card = el('li', { class: 'review-card' }, [
+    el('span', { class: 'event-row__title', text: event.title ?? 'An event' }),
+    el('span', { class: 'event-row__meta', text: `${event.host_name || 'A host'} · ${event.venue ?? ''}` }),
+    el('span', { class: 'event-row__meta', text: `Now: ${formatWhenRange(event.starts_at, event.ends_at)}` }),
+    el('span', { class: 'event-row__meta', text: `Asks to end: ${formatWhen(request.requested_ends_at)}` }),
+    el('p', { class: 'review-card__text', text: request.reason }),
+    el('div', { class: 'field' }, [
+      el('label', { for: note.id, class: 'field__label', text: 'Note to the host (needed if you decline)' }),
+      note,
+    ]),
+    error,
+    el('div', { class: 'field-pair' }, [approve, decline]),
+  ]);
+  async function decide(button, busyText, yes) {
+    error.hidden = true;
+    if (!yes && note.value.trim().length === 0) {
+      error.textContent = 'Tell the host why the request is declined.';
+      error.hidden = false;
+      return;
+    }
+    await whileBusy(button, busyText, async () => {
+      try {
+        await decideEndRequest(request.id, { approve: yes, note: note.value });
+        card.remove();
+        onDone();
+      } catch (problem) {
+        error.textContent = extensionMessage(problem);
+        error.hidden = false;
+      }
+    });
+  }
+  approve.addEventListener('click', () => decide(approve, 'Approving…', true));
+  decline.addEventListener('click', () => decide(decline, 'Declining…', false));
+  return card;
+}
+
 export async function renderReview({ session }) {
   const { profile, admin } = await loadViewer(session);
   const back = linkTo('#/', 'Back to Discover');
@@ -241,7 +285,8 @@ export async function renderReview({ session }) {
     const tracks = await listTrackQueue().catch(() => []);
     const disputes = await listOpenDisputes().catch(() => []);
     const reports = await listOpenReports().catch(() => []);
-    waiting = events.length + tracks.length + disputes.length + reports.length;
+    const extensions = await listEndRequests().catch(() => []);
+    waiting = events.length + tracks.length + disputes.length + reports.length + extensions.length;
     update();
 
     const parts = [];
@@ -275,6 +320,8 @@ export async function renderReview({ session }) {
       done();
       fill().catch(() => {});
     }));
+    // Hosts asking for more time: the event may be on soon, so these come before new posts.
+    await section('End time requests', extensions, (request, done) => extensionCard(request, done));
     await section('Events', events, (event, done) => reviewCard(eventAsItem(event), done));
     await section('Music', tracks, (track, done) => reviewCard(trackAsItem(track), done));
     body.replaceChildren(...parts);
