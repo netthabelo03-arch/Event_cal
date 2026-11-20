@@ -162,6 +162,38 @@ export function formatWhen(iso) {
 }
 
 /**
+ * Check a new end time a Host picks for an event that is already posted.
+ * @param {{ starts_at: string, ends_at: string }} event
+ * @param {boolean} hasTickets whether any tickets are sold (then it may only move later)
+ * @returns {string | null}
+ */
+export function checkNewEnd(event, date, time, nowMs, hasTickets) {
+  if (!date || !time) return 'Choose the new end date and time.';
+  const iso = startsAtIso(date, time);
+  if (iso === null) return 'Enter a real date and time.';
+  const end = Date.parse(iso);
+  const start = Date.parse(event.starts_at);
+  if (end <= nowMs) return 'The new end must be in the future.';
+  if (end <= start) return 'The event must end after it starts.';
+  if (end - start > MAX_EVENT_DAYS * 24 * 3600 * 1000) return `An event can run for at most ${MAX_EVENT_DAYS} days.`;
+  if (hasTickets && end < Date.parse(event.ends_at)) return 'Tickets are already sold, so the event can only end later, not earlier.';
+  return null;
+}
+
+/** Plain words for what the server says when a new end time is refused. */
+export function endChangeMessage(error) {
+  const text = `${error?.message ?? ''} ${error?.code ?? ''}`;
+  if (text.includes('has_tickets')) return 'Tickets are already sold, so the event can only end later, not earlier.';
+  if (text.includes('too_long')) return `An event can run for at most ${MAX_EVENT_DAYS} days.`;
+  if (text.includes('end_before_start')) return 'The event must end after it starts.';
+  if (text.includes('end_in_past')) return 'The new end must be in the future.';
+  if (text.includes('event_over')) return 'This event has already ended.';
+  if (text.includes('not_changeable')) return 'This event can no longer be changed.';
+  if (text.includes('not_your_event')) return 'This event is not yours to change.';
+  return 'The end time could not be saved. Check your connection and try again.';
+}
+
+/**
  * Whether tickets can still be bought: until the event ends (or, for an event
  * saved before end times existed, until it starts).
  */

@@ -1,14 +1,14 @@
 // My events: a host's own events with their review status, and the way in
 // to posting a new one.
 
-import { listMyEvents } from '../events/api.js';
+import { listMyEvents, setEventEnd } from '../events/api.js';
 import { addTicketTypes, cancelEvent, eventTakings, getMyPayout, setRefundDays } from '../tickets/api.js';
 import { REFUND_CHOICES, refundPolicyLabel } from '../rules/fees.js';
 import { ticketEditor } from '../tickets/editor.js';
 import { formatRand, moneyErrorMessage } from '../tickets/rules.js';
 import { startBoost, payDemoBoost, verifyBoost } from '../boosts/api.js';
 import { BOOST_OPTIONS, boostedUntil, boostedLabel, boostErrorMessage } from '../boosts/rules.js';
-import { statusOf, formatWhen, formatWhenRange } from '../events/rules.js';
+import { statusOf, formatWhen, formatWhenRange, johannesburgParts, startsAtIso, checkNewEnd, endChangeMessage } from '../events/rules.js';
 import { viewsLabel } from '../events/discovery.js';
 import { friendlyAuthError } from '../auth/errors.js';
 import { loadViewer } from '../viewer.js';
@@ -186,6 +186,58 @@ function refundRulePanel(event) {
   return area;
 }
 
+/** "Ends: …" with Change: the Host moves the end time (later, or earlier while nothing is sold). */
+function endTimePanel(event, hasSold, onChange) {
+  const line = el('span', { class: 'event-row__meta', text: `Ends: ${formatWhen(event.ends_at)}` });
+  const change = el('button', { type: 'button', class: 'text-link', text: 'Change' });
+  const area = el('div', { class: 'refund-rule' }, [line, change]);
+  const showLine = () => {
+    area.className = 'refund-rule';
+    line.textContent = `Ends: ${formatWhen(event.ends_at)}`;
+    area.replaceChildren(line, change);
+  };
+  change.addEventListener('click', () => {
+    const now = johannesburgParts(event.ends_at);
+    const date = el('input', { type: 'date', class: 'input', value: now.date, 'aria-label': 'New end date' });
+    const time = el('input', { type: 'time', class: 'input', value: now.time, 'aria-label': 'New end time' });
+    const problem = el('p', { class: 'field__error', role: 'alert' });
+    problem.hidden = true;
+    const save = el('button', { type: 'button', class: 'button button--primary button--small', text: 'Save end time' });
+    const close = el('button', { type: 'button', class: 'text-link', text: 'Leave it as it is' });
+    close.addEventListener('click', showLine);
+    save.addEventListener('click', async () => {
+      const wrong = checkNewEnd(event, date.value, time.value, Date.now(), hasSold);
+      if (wrong) {
+        problem.textContent = wrong;
+        problem.hidden = false;
+        return;
+      }
+      problem.hidden = true;
+      await whileBusy(save, 'Saving…', async () => {
+        try {
+          event.ends_at = await setEventEnd(event.id, startsAtIso(date.value, time.value));
+          onChange();
+          showLine();
+        } catch (error) {
+          problem.textContent = endChangeMessage(error);
+          problem.hidden = false;
+        }
+      });
+    });
+    area.className = 'refund-rule refund-rule--open';
+    area.replaceChildren(
+      el('span', { class: 'field__label', text: 'When does the event end?' }),
+      el('p', { class: 'field__hint', text: hasSold
+        ? 'Tickets are sold, so you can make it end later (up to 31 days after the start), not earlier. It stays on sale and in Discover until then.'
+        : 'Up to 31 days after the start. It stays on sale and in Discover until then.' }),
+      el('div', { class: 'field-pair' }, [date, time]),
+      problem,
+      el('div', { class: 'confirm-row' }, [save, close]),
+    );
+  });
+  return area;
+}
+
 /** Ticket money for one event: what was sold, plusespot's 5%, what the Host gets, refunds. */
 function takingsLine(event) {
   const line = el('span', { class: 'event-row__meta' });
@@ -244,9 +296,10 @@ function cancelPanel(event, row) {
 
 function eventRow(event) {
   const status = statusOf(event.status);
+  const dates = el('span', { class: 'event-row__meta', text: `${formatWhenRange(event.starts_at, event.ends_at)} · ${event.venue}` });
   const lines = [
     el('span', { class: 'event-row__title', text: event.title }),
-    el('span', { class: 'event-row__meta', text: `${formatWhenRange(event.starts_at, event.ends_at)} · ${event.venue}` }),
+    dates,
     el('span', { class: `chip chip--${status.tone}`, text: status.label }),
   ];
   if (event.status === 'rejected' && event.reject_reason) {
@@ -280,6 +333,13 @@ function eventRow(event) {
       const scan = el('a', { href: `#/scan/${event.id}`, class: 'button button--quiet button--small event-row__scan', text: 'Scan tickets at the door' });
       lines.push(scan);
     }
+  }
+  // The end time can move while the event has not ended (026).
+  if ((event.status === 'live' || event.status === 'in_review') && !event.cancelled_at && event.ends_at && Date.parse(event.ends_at) > Date.now()) {
+    const sold = (event.ticket_types ?? []).some((type) => type.sold > 0);
+    lines.splice(2, 0, endTimePanel(event, sold, () => {
+      dates.textContent = `${formatWhenRange(event.starts_at, event.ends_at)} · ${event.venue}`;
+    }));
   }
   const row = el('li', { class: 'event-row' }, lines);
   if ((event.status === 'live' || event.status === 'in_review') && upcoming) row.append(cancelPanel(event, row));

@@ -154,3 +154,26 @@ test('021: events have an end date and time and leave public view exactly then',
   assert.match(api, /ends_at: startsAtIso\(form\.endDate, form\.endTime\)/);
   assert.match(api, /p_ends_at: startsAtIso\(form\.endDate, form\.endTime\)/);
 });
+
+test('026: a Host moves the end time of their event; earlier only while no tickets are sold', async () => {
+  const { checkNewEnd, endChangeMessage } = await import('../src/events/rules.js');
+  const event = { starts_at: '2027-01-15T08:00:00Z', ends_at: '2027-01-15T20:00:00Z' };
+  const now = Date.parse('2027-01-10T10:00:00Z');
+  assert.equal(checkNewEnd(event, '2027-01-17', '22:00', now, true), null, 'a festival adds two days');
+  assert.match(checkNewEnd(event, '2027-01-15', '18:00', now, true), /only end later/);
+  assert.equal(checkNewEnd(event, '2027-01-15', '18:00', now, false), null, 'earlier is fine with nothing sold');
+  assert.match(checkNewEnd(event, '2027-01-15', '09:00', now, false), /end after it starts/);
+  assert.match(checkNewEnd(event, '2027-02-16', '10:00', now, false), /at most 31 days/);
+  assert.match(checkNewEnd(event, '2027-01-17', '22:00', Date.parse('2027-01-18T00:00:00Z'), false), /in the future/);
+  assert.match(checkNewEnd(event, '', '', now, false), /Choose/);
+  assert.match(endChangeMessage({ message: 'has_tickets' }), /only end later/);
+  assert.match(endChangeMessage({ message: 'event_over' }), /already ended/);
+  assert.match(endChangeMessage({}), /could not be saved/);
+  const { readFileSync } = await import('node:fs');
+  const sql = readFileSync(new URL('../supabase/026_host_end_time.sql', import.meta.url), 'utf8');
+  assert.match(sql, /if not found or e\.host_id <> caller then raise exception 'not_your_event'/);
+  assert.match(sql, /if p_ends_at < e\.ends_at and exists \(select 1 from public\.tickets t where t\.event_id = e\.id\)/);
+  assert.match(sql, /revoke all on function public\.set_event_end\(uuid, timestamptz\) from public, anon;/);
+  const dry = readFileSync(new URL('../supabase/tests/026_dryrun.sql', import.meta.url), 'utf8');
+  assert.ok(dry.includes(sql.slice(sql.indexOf('begin;') + 6, sql.lastIndexOf('commit;'))));
+});

@@ -210,3 +210,11 @@ async function promotedNow(client) {
     return [];
   }
 }
+
+/** Change the end time of the Host's own event (026). @returns {Promise<string>} the new end */
+export async function setEventEnd(eventId, endsAtIso) {
+  const client = await getClient();
+  const { data, error } = await client.rpc('set_event_end', { p_event_id: eventId, p_ends_at: endsAtIso });
+  if (error) throw error;
+  return data;
+}
