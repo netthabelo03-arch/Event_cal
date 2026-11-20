@@ -105,3 +105,24 @@ test('the key converter turns a known key into its bytes', () => {
   const bytes = keyBytes('BAEC');
   assert.deepEqual([...bytes], [4, 1, 2]);
 });
+
+test('024: unused uploads are removed once a day at about 03:00, never anything in use or under 2 days old', async () => {
+  const job = await import('../supabase/functions/send-reminders/schedule.js');
+  assert.equal(job.cleanupDue(Date.parse('2026-11-21T01:00:00Z')), true, '03:00 Johannesburg');
+  assert.equal(job.cleanupDue(Date.parse('2026-11-21T01:04:59Z')), true);
+  assert.equal(job.cleanupDue(Date.parse('2026-11-21T01:05:00Z')), false, 'only one 5-minute run a day');
+  assert.equal(job.cleanupDue(Date.parse('2026-11-21T03:00:00Z')), false, '05:00 Johannesburg');
+  assert.deepEqual(job.removalBatches([{ bucket: 'clips', name: 'a/1.mp4' }, { bucket: 'audio', name: 'a/1.mp3' }, { bucket: 'clips', name: 'b/2.mp4' }, { bucket: 'clips' }]),
+    [{ bucket: 'clips', names: ['a/1.mp4', 'b/2.mp4'] }, { bucket: 'audio', names: ['a/1.mp3'] }]);
+  const many = Array.from({ length: 250 }, (_, i) => ({ bucket: 'clips', name: `x/${i}.mp4` }));
+  assert.deepEqual(job.removalBatches(many).map((b) => b.names.length), [100, 100, 50]);
+  assert.deepEqual(job.removalBatches(null), []);
+  const { readFileSync } = await import('node:fs');
+  const sql = readFileSync(new URL('../supabase/024_unused_media.sql', import.meta.url), 'utf8');
+  assert.match(sql, /greatest\(p_older_than, interval '1 day'\)/);
+  assert.match(sql, /not exists \(select 1 from public\.events e where o\.bucket_id = 'clips' and e\.clip_path = o\.name\)/);
+  assert.match(sql, /revoke all on function public\.unused_media\(interval, integer\) from public, anon, authenticated;/);
+  assert.doesNotMatch(sql, /delete from storage/i);
+  const dry = readFileSync(new URL('../supabase/tests/024_dryrun.sql', import.meta.url), 'utf8');
+  assert.ok(dry.includes(sql.slice(sql.indexOf('begin;') + 6, sql.lastIndexOf('commit;'))));
+});

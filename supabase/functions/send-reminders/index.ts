@@ -3,7 +3,8 @@
 // with the project's secret key. Sends the reminder email a day before each
 // event, and the phone notification two hours before. It also tells people who
 // set a reminder or hold a ticket when an event passes 50%, 75% and sold out,
-// and tells an Artist when their dispute is answered.
+// and tells an Artist when their dispute is answered. Once a day (about 03:00)
+// it removes uploaded files that no event or track uses (024_unused_media.sql).
 //
 // Secrets to set under Edge Functions, Secrets:
 //   RESEND_API_KEY     the email service's API key
@@ -15,7 +16,7 @@
 
 import { withSupabase } from 'npm:@supabase/server@^1';
 import webpush from 'npm:web-push@3.6.7';
-import { dueKinds, emailContent, pushPayload, EMAIL_BEFORE_MS, eventSales, salesMilestone, salesNotice, salesEmail, disputeNotice, disputeEmail } from './schedule.js';
+import { dueKinds, emailContent, pushPayload, EMAIL_BEFORE_MS, eventSales, salesMilestone, salesNotice, salesEmail, disputeNotice, disputeEmail, cleanupDue, removalBatches } from './schedule.js';
 
 const env = (name) => Deno.env.get(name) ?? '';
 
@@ -195,6 +196,21 @@ export default {
           } catch (problem) {
             result.failures.push(`dispute email ${dispute.ref}: ${problem.message}`);
           }
+        }
+      }
+    }
+
+    // Once a day: remove uploads nothing uses (older than 2 days).
+    if (cleanupDue(now)) {
+      result.filesRemoved = 0;
+      const { data: unused, error } = await db.rpc('unused_media', { p_older_than: '2 days', p_limit: 200 });
+      if (error) {
+        result.failures.push(`unused files: ${error.message}`);
+      } else {
+        for (const batch of removalBatches(unused)) {
+          const { data: removed, error: removeError } = await db.storage.from(batch.bucket).remove(batch.names);
+          if (removeError) result.failures.push(`remove ${batch.bucket}: ${removeError.message}`);
+          else result.filesRemoved += removed?.length ?? 0;
         }
       }
     }
