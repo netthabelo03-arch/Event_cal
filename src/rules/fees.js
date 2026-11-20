@@ -65,10 +65,43 @@ export const REFUND_CHOICES = [
   { days: 14, label: 'Until 14 days before' },
 ];
 
+/**
+ * How much of the ticket price comes back, by how close the event is (028).
+ * Each step: from this many days before the start, this percentage. After the
+ * Host's own refund rule closes, nothing. The database uses the same steps.
+ */
+export const REFUND_STEPS = [
+  { days: 14, percent: 100 },
+  { days: 7, percent: 75 },
+  { days: 3, percent: 50 },
+  { days: 0, percent: 25 },
+];
+
+/** The percentage of the ticket price a buyer gets back now; 0 when refunds are closed. */
+export function refundPercent(startsAt, refundDays, nowMs = Date.now()) {
+  const deadline = refundDeadline(startsAt, refundDays);
+  if (deadline === null || nowMs >= deadline.getTime()) return 0;
+  const start = Date.parse(startsAt);
+  const step = REFUND_STEPS.find((item) => nowMs <= start - item.days * 24 * 3600 * 1000);
+  return step ? step.percent : 0;
+}
+
+/** When the refund next drops: { at: Date, percent } (the next, smaller percentage), or null. */
+export function nextRefundDrop(startsAt, refundDays, nowMs = Date.now()) {
+  const now = refundPercent(startsAt, refundDays, nowMs);
+  if (now === 0) return null;
+  const start = Date.parse(startsAt);
+  const deadline = refundDeadline(startsAt, refundDays).getTime();
+  const marks = REFUND_STEPS.filter((item) => item.days > 0).map((item) => start - item.days * 24 * 3600 * 1000);
+  const next = [...marks, deadline].filter((at) => at > nowMs).sort((a, b) => a - b)[0];
+  if (next === undefined) return null;
+  return { at: new Date(next), percent: refundPercent(startsAt, refundDays, next + 1) };
+}
+
 /** "No refunds", or "Refunds until 3 days before the event". */
 export function refundPolicyLabel(days) {
   if (!Number.isInteger(days)) return 'No refunds';
-  return `Refunds until ${days} ${days === 1 ? 'day' : 'days'} before the event (booking fee not refunded)`;
+  return `Refunds until ${days} ${days === 1 ? 'day' : 'days'} before the event, shrinking from 100% as it gets close (booking fee not refunded)`;
 }
 
 /** The last moment a buyer may ask for a refund, or null when the event has no refunds. */
@@ -96,7 +129,12 @@ export function refundNotice(event, nowMs = Date.now()) {
   if (nowMs >= deadline.getTime()) {
     return { tone: 'bad', text: `No refunds for these tickets: refunds for this event closed on ${when(deadline)}.` };
   }
-  return { tone: 'good', text: `Refunds until ${when(deadline)} (booking fee not refunded).` };
+  const percent = refundPercent(event.starts_at, event.refund_days, nowMs);
+  const drop = nextRefundDrop(event.starts_at, event.refund_days, nowMs);
+  const later = drop === null ? '' : drop.percent > 0
+    ? ` It drops to ${drop.percent}% on ${when(drop.at)}`
+    : ` No refunds from ${when(drop.at)}`;
+  return { tone: 'good', text: `Cancel now and get ${percent}% of the ticket price back.${later ? `${later}.` : ''} The booking fee is not refunded.` };
 }
 
 /**
@@ -122,13 +160,16 @@ export function canAskRefund(order, event, now = Date.now()) {
   if (order.status !== 'paid' || order.refund_status || !(order.total_cents > 0)) return false;
   if (event.status !== 'live') return false;
   if ((order.tickets ?? []).some((ticket) => ticket.checked_in_at)) return false;
-  const deadline = refundDeadline(event.starts_at, event.refund_days);
-  return deadline !== null && now < deadline.getTime();
+  return refundPercent(event.starts_at, event.refund_days, now) > 0;
 }
 
-/** How much a buyer gets back: the ticket price for their own refund, everything when the Host cancels. */
-export function refundCents(order, reason) {
-  return reason === 'cancelled' ? order.total_cents : order.total_cents - (order.booking_fee_cents ?? 0);
+/**
+ * How much a buyer gets back: their share of the ticket price for their own
+ * refund (percent, see REFUND_STEPS), everything when the Host cancels.
+ */
+export function refundCents(order, reason, percent = 100) {
+  if (reason === 'cancelled') return order.total_cents;
+  return Math.floor(((order.total_cents - (order.booking_fee_cents ?? 0)) * percent) / 100);
 }
 
 /** Words for where a refund is. */
