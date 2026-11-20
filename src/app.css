@@ -1153,3 +1153,12 @@ body.full .app { max-width: none; padding: 0; gap: 0; }
 .ticket-type--waiting .sold-meter__fill { background: var(--color-warning); }
 .ticket-type--waiting .ticket-type__text > .event-row__meta:not(.sold-meter__label--held) { color: var(--color-warning); font-weight: 600; }
 .ticket-type--good .ticket-type__text > .event-row__meta:not(.sold-meter__label--held) { color: var(--color-accent-hover); }
+
+/* Door scanners (027) */
+.door-devices { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.door-device { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; padding: 10px 12px; border: 1px solid var(--color-line); border-radius: 12px; }
+.door-device .text-link { margin-left: auto; }
+.door-devices__new { display: grid; gap: 8px; padding: 12px; border: 1px dashed var(--color-line-strong); border-radius: 12px; }
+.door-devices__qr { width: 180px; max-width: 100%; background: #fff; padding: 8px; border-radius: 8px; }
+.door-devices__qr svg { display: block; width: 100%; height: auto; }
+.door-devices__link { font-family: ui-monospace, monospace; font-size: 12px; word-break: break-all; color: var(--color-text-muted); }

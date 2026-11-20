@@ -6,6 +6,8 @@ import { addTicketTypes, cancelEvent, eventTakings, getMyPayout, setRefundDays }
 import { REFUND_CHOICES, refundPolicyLabel } from '../rules/fees.js';
 import { ticketEditor } from '../tickets/editor.js';
 import { formatRand, moneyErrorMessage } from '../tickets/rules.js';
+import { DOOR_DEVICE_LIMIT, listDoorDevices, addDoorDevice, revokeDoorDevice, doorLink, doorErrorMessage, lastUsedLabel } from '../tickets/doors.js';
+import { qrSvgForText } from '../tickets/qr.js';
 import { startBoost, payDemoBoost, verifyBoost } from '../boosts/api.js';
 import { BOOST_OPTIONS, boostedUntil, boostedLabel, boostErrorMessage } from '../boosts/rules.js';
 import { statusOf, formatWhen, formatWhenRange, johannesburgParts, startsAtIso, checkExtension, extensionMessage, extensionStatus } from '../events/rules.js';
@@ -360,6 +362,105 @@ function eventRow(event) {
   return row;
 }
 
+/**
+ * Door scanners (027): up to 20 phones that scan tickets for the Host. Each
+ * gets a secret link (shown once, with a QR code to open it on the phone).
+ */
+async function doorDevicesCard(userId) {
+  const list = el('ul', { class: 'door-devices' });
+  const count = el('p', { class: 'event-row__meta' });
+  const problem = el('p', { class: 'field__error', role: 'alert' });
+  problem.hidden = true;
+  const fresh = el('div', { class: 'door-devices__new' });
+  fresh.hidden = true;
+  let devices = await listDoorDevices(userId).catch(() => []);
+
+  const name = el('input', { type: 'text', class: 'input', maxlength: '40', placeholder: 'For example Gate 1', 'aria-label': 'Scanner name' });
+  const add = el('button', { type: 'button', class: 'button button--quiet button--small', text: 'Add a scanner' });
+
+  function draw() {
+    count.textContent = `${devices.length} of ${DOOR_DEVICE_LIMIT} scanners. Each opens a link on a phone and checks tickets in for your events, from 12 hours before the start until the end. No account needed.`;
+    add.disabled = devices.length >= DOOR_DEVICE_LIMIT;
+    list.replaceChildren(...devices.map((device) => {
+      const off = el('button', { type: 'button', class: 'text-link', text: 'Switch off' });
+      const row = el('li', { class: 'door-device' }, [
+        el('span', { class: 'event-row__title', text: device.name }),
+        el('span', { class: 'event-row__meta', text: lastUsedLabel(device.last_used_at, Date.now()) }),
+        off,
+      ]);
+      off.addEventListener('click', async () => {
+        if (off.dataset.sure !== 'yes') {
+          off.dataset.sure = 'yes';
+          off.textContent = 'Tap again to switch it off for good';
+          return;
+        }
+        await whileBusy(off, 'Switching off…', async () => {
+          try {
+            await revokeDoorDevice(device.id);
+            devices = devices.filter((item) => item.id !== device.id);
+            draw();
+          } catch (error) {
+            problem.textContent = doorErrorMessage(error);
+            problem.hidden = false;
+          }
+        });
+      });
+      return row;
+    }));
+  }
+
+  add.addEventListener('click', async () => {
+    problem.hidden = true;
+    const label = name.value.trim();
+    if (!label) {
+      problem.textContent = doorErrorMessage({ message: 'no_name' });
+      problem.hidden = false;
+      return;
+    }
+    await whileBusy(add, 'Adding…', async () => {
+      try {
+        const made = await addDoorDevice(label);
+        devices.push({ id: made.device_id, name: label, last_used_at: null });
+        name.value = '';
+        draw();
+        const link = doorLink(made.token, location.href);
+        const copy = el('button', { type: 'button', class: 'button button--quiet button--small', text: 'Copy link' });
+        copy.addEventListener('click', async () => {
+          try {
+            await navigator.clipboard.writeText(link);
+            copy.textContent = 'Copied';
+          } catch {
+            copy.textContent = 'Select the link and copy it';
+          }
+        });
+        const picture = el('div', { class: 'door-devices__qr', 'aria-label': `QR code for ${label}` });
+        qrSvgForText(link).then((svg) => { if (svg) picture.innerHTML = svg; });
+        fresh.replaceChildren(
+          el('p', { class: 'field__label', text: `Link for ${label}` }),
+          el('p', { class: 'field__hint', text: 'Open it on the scanning phone: scan this QR code with its camera, or send the link. It is shown only now. Anyone with the link can check your tickets in, so share it only with your door staff. Lost it? Switch the scanner off and add a new one.' }),
+          picture,
+          el('p', { class: 'door-devices__link', text: link }),
+          copy,
+        );
+        fresh.hidden = false;
+      } catch (error) {
+        problem.textContent = doorErrorMessage(error);
+        problem.hidden = false;
+      }
+    });
+  });
+
+  draw();
+  return el('section', { class: 'notice door-devices__card' }, [
+    el('h2', { class: 'section__title', text: 'Door scanners' }),
+    count,
+    list,
+    el('div', { class: 'field-pair' }, [name, add]),
+    problem,
+    fresh,
+  ]);
+}
+
 /** Where the Host's ticket money goes: their bank, or a nudge to add it. */
 async function payoutCard(userId) {
   const payout = await getMyPayout(userId).catch(() => null);
@@ -409,5 +510,5 @@ export async function renderMyEvents({ session }) {
   if (events.length === 0) {
     return [...head, promote, el('p', { class: 'notice', text: 'You have not posted an event yet. Your events and their review status will show here.' })];
   }
-  return [...head, promote, await payoutCard(session.user.id), el('ul', { class: 'event-list' }, events.map(eventRow))];
+  return [...head, promote, await payoutCard(session.user.id), await doorDevicesCard(session.user.id), el('ul', { class: 'event-list' }, events.map(eventRow))];
 }

@@ -34,3 +34,17 @@ export async function qrSvg(code) {
     return null;
   }
 }
+
+/** A QR code for any short text, such as a scanner's link. @returns {Promise<string | null>} */
+export async function qrSvgForText(text) {
+  if (!text || String(text).length > 300) return null;
+  try {
+    const qrcode = await loadLibrary();
+    const qr = qrcode(0, 'M');
+    qr.addData(String(text));
+    qr.make();
+    return qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
+  } catch {
+    return null;
+  }
+}
