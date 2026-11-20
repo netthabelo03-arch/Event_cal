@@ -2,7 +2,7 @@
 // the total, and the button that starts paying.
 
 import { listTicketTypes, startCheckout } from './api.js';
-import { formatRand, availabilityLabel, cartSummary, maxFor, buyLabel, checkoutErrorMessage, remaining, buyable, HELD_NOTE } from './rules.js';
+import { formatRand, availabilityLabel, cartSummary, maxFor, buyLabel, checkoutErrorMessage, remaining, buyable, meterPercent, HELD_NOTE } from './rules.js';
 import { orderPrice, refundPolicyLabel } from '../rules/fees.js';
 import { el, icon, whileBusy } from '../dom.js';
 
@@ -60,10 +60,10 @@ export async function ticketsBox(event, navigate) {
       el('span', { class: 'ticket-type__text' }, [
         el('span', { class: 'ticket-type__name', text: type.name }),
         el('span', { class: 'ticket-type__price', text: formatRand(type.price_cents) }),
-        // How much is sold shows only from 75% (in steps), and at sold out.
+        // A number shows only from 75% (in steps); before that the bar and a few words.
         ...(label ? [
           el('span', { class: 'sold-meter', role: 'img', 'aria-label': label }, [
-            el('span', { class: 'sold-meter__fill', style: `width:${soldOut ? 100 : parseInt(label, 10)}%` }),
+            el('span', { class: 'sold-meter__fill', style: `width:${meterPercent(type)}%` }),
           ]),
           el('span', { class: `event-row__meta${soldOut ? ' sold-meter__label--out' : ''}`, text: label }),
         ] : []),

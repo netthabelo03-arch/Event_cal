@@ -3,7 +3,7 @@
 import { listMyReminders, removeReminder } from '../reminders/api.js';
 import { phonePanel } from '../reminders/panel.js';
 import { formatWhen } from '../events/rules.js';
-import { eventSales, eventSalesLabel } from '../tickets/rules.js';
+import { eventSales, eventSalesLabel, salesTone } from '../tickets/rules.js';
 import { friendlyAuthError } from '../auth/errors.js';
 import { loadViewer } from '../viewer.js';
 import { topBar } from '../usermenu.js';
@@ -13,7 +13,7 @@ function salesChip(types) {
   const sales = eventSales(types);
   const label = eventSalesLabel(sales);
   if (!label) return [];
-  return [el('span', { class: `chip chip--${sales.soldOut ? 'bad' : 'waiting'}`, text: label })];
+  return [el('span', { class: `chip chip--${salesTone(sales)}`, text: label })];
 }
 
 function reminderRow(userId, event, onRemoved) {
