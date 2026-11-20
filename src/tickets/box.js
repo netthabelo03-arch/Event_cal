@@ -2,7 +2,7 @@
 // the total, and the button that starts paying.
 
 import { listTicketTypes, startCheckout } from './api.js';
-import { formatRand, availabilityLabel, cartSummary, maxFor, buyLabel, checkoutErrorMessage, remaining, buyable, meterPercent, HELD_NOTE } from './rules.js';
+import { formatRand, availabilityLabel, cartSummary, maxFor, buyLabel, checkoutErrorMessage, remaining, buyable, meterPercent, ticketTone, HELD_NOTE } from './rules.js';
 import { orderPrice, refundPolicyLabel } from '../rules/fees.js';
 import { el, icon, whileBusy } from '../dom.js';
 
@@ -56,7 +56,7 @@ export async function ticketsBox(event, navigate) {
     const label = availabilityLabel(type);
     rows.push({ type, count, minus, plus });
     const soldOut = remaining(type) === 0;
-    rows.at(-1).node = el('li', { class: `ticket-type${soldOut ? ' ticket-type--sold-out' : ''}` }, [
+    rows.at(-1).node = el('li', { class: `ticket-type ticket-type--${ticketTone(type)}${soldOut ? ' ticket-type--sold-out' : ''}` }, [
       el('span', { class: 'ticket-type__text' }, [
         el('span', { class: 'ticket-type__name', text: type.name }),
         el('span', { class: 'ticket-type__price', text: formatRand(type.price_cents) }),

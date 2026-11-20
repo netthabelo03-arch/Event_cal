@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
 import {
-  SELL_LIMIT, sellable, percentSold, eventSales, eventSalesLabel, salesStep, shareOfSellable, SALES_STEPS, meterPercent, salesTone, earlyWords,
+  SELL_LIMIT, sellable, percentSold, eventSales, eventSalesLabel, salesStep, shareOfSellable, SALES_STEPS, meterPercent, salesTone, earlyWords, ticketTone,
   MAX_PER_ORDER, formatRand, parseRand, checkTicketTypes, remaining, availabilityLabel, cartSummary, maxFor, buyLabel, checkoutErrorMessage,
 } from '../src/tickets/rules.js';
 import { verifySignature, paidOrderFrom, isOrderId, returnUrl, paymentMode } from '../supabase/functions/paystack-webhook/paystack.js';
@@ -287,4 +287,11 @@ test('before 75%: a bar without a number, with "Tickets available" or "Selling f
   assert.equal(salesTone(eventSales([{ quantity: 50, sold: 20 }])), 'good');
   assert.equal(salesTone(eventSales([{ quantity: 30, sold: 20 }])), 'waiting');
   assert.equal(salesTone(eventSales([{ quantity: 7, sold: 6 }])), 'bad');
+});
+
+test('the ticket box uses the same colours: green available, amber from 50% and at the steps, red sold out', () => {
+  assert.equal(ticketTone({ quantity: 50, sold: 20 }), 'good');
+  assert.equal(ticketTone({ quantity: 30, sold: 20 }), 'waiting', 'Selling fast');
+  assert.equal(ticketTone({ quantity: 30, sold: 21 }), 'waiting', '75% sold');
+  assert.equal(ticketTone({ quantity: 7, sold: 6 }), 'bad');
 });
