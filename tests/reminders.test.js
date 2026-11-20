@@ -126,3 +126,15 @@ test('024: unused uploads are removed once a day at about 03:00, never anything 
   const dry = readFileSync(new URL('../supabase/tests/024_dryrun.sql', import.meta.url), 'utf8');
   assert.ok(dry.includes(sql.slice(sql.indexOf('begin;') + 6, sql.lastIndexOf('commit;'))));
 });
+
+test('025: the clean-up removes only uploads that were never posted; replaced originals are kept', async () => {
+  const { readFileSync } = await import('node:fs');
+  const sql = readFileSync(new URL('../supabase/025_media_ever_posted.sql', import.meta.url), 'utf8');
+  assert.match(sql, /not exists \(select 1 from public\.media_ever_posted m where m\.bucket = o\.bucket_id and m\.name = o\.name\)/);
+  assert.match(sql, /create trigger events_note_media after insert or update of clip_path on public\.events/);
+  assert.match(sql, /create trigger tracks_note_media after insert or update of clip_path, audio_path on public\.tracks/);
+  assert.match(sql, /perform public\.note_media_posted\('clips', old\.clip_path\)/, 'the replaced original is recorded');
+  assert.match(sql, /union select o\.bucket_id::text, o\.name::text from storage\.objects o/, 'files stored before this are kept');
+  const dry = readFileSync(new URL('../supabase/tests/025_dryrun.sql', import.meta.url), 'utf8');
+  assert.ok(dry.includes(sql.slice(sql.indexOf('begin;') + 6, sql.lastIndexOf('commit;'))));
+});
