@@ -223,3 +223,7 @@ You need Node.js 20 or newer. Nothing has to be installed.
 ```
 npm test
 ```
+
+## Deploying
+
+Before every deploy run `node tools/stamp.mjs` (it writes versioned file addresses into `index.html`; `npm test` fails if you forget). Then push `main` and `main:gh-pages`.

@@ -198,6 +198,8 @@ function watchConnection() {
   window.addEventListener('online', () => { bar.hidden = true; });
 }
 
+// Every file loaded: tells the reload-once guard in index.html that the app started.
+window.__plusespotStarted = true;
 start();
 
 // Lets people add the app to their home screen and open it with a weak connection.

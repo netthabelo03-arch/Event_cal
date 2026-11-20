@@ -2,7 +2,7 @@
 // It always tries the network first, so people get the newest version,
 // and only falls back to the saved copy when there is no connection.
 
-const CACHE = 'event-cal-shell-v22';
+const CACHE = 'event-cal-shell-v23';
 
 self.addEventListener('install', () => {
   self.skipWaiting();
@@ -28,7 +28,16 @@ self.addEventListener('fetch', (event) => {
       .then((response) => {
         if (response.ok) {
           const copy = response.clone();
-          caches.open(CACHE).then((cache) => cache.put(request, copy));
+          caches.open(CACHE).then(async (cache) => {
+            await cache.put(request, copy);
+            // Files have versioned addresses (?v=...): keep only the newest copy of each.
+            const url = new URL(request.url);
+            if (!url.searchParams.has('v')) return;
+            for (const old of await cache.keys()) {
+              const oldUrl = new URL(old.url);
+              if (oldUrl.pathname === url.pathname && oldUrl.search !== url.search) await cache.delete(old);
+            }
+          });
         }
         return response;
       })
