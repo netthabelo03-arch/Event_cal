@@ -49,6 +49,10 @@ export function parseRoute(hash) {
     // The feed opened on its Music section.
     return { screen: 'feed', id: parts[1] };
   }
+  if (parts.length === 2 && parts[0] === 'door' && /^[0-9a-f]{64}$/.test(parts[1])) {
+    // A door scanner's own link (027): no account needed.
+    return { screen: 'door', id: parts[1] };
+  }
   if (parts.length === 2 && parts[0] === 'order' && ORDER_ID.test(parts[1])) {
     return { screen: 'order', id: parts[1] };
   }
@@ -89,6 +93,7 @@ export function hashFor(route) {
   if (route.screen === 'detail') return `#/${route.kind}/${route.id}`;
   if (route.screen === 'order') return `#/order/${route.id}`;
   if (route.screen === 'scan') return `#/scan/${route.id}`;
+  if (route.screen === 'door') return `#/door/${route.id}`;
   if (route.screen === 'tickets' && route.id) return `#/tickets/${route.id}`;
   if (route.screen === 'edit-track') return `#/edit-track/${route.id}`;
   if (route.screen === 'edit-event') return `#/edit-event/${route.id}`;

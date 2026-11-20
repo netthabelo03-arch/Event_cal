@@ -22,6 +22,7 @@ import { renderReminders } from './screens/reminders.js';
 import { renderTickets } from './screens/tickets.js';
 import { renderOrder } from './screens/order.js';
 import { renderScan } from './screens/scan.js';
+import { renderDoor } from './screens/door.js';
 import { renderMyMusic } from './screens/mymusic.js';
 import { renderNewTrack } from './screens/newtrack.js';
 import { renderTerms, renderPrivacy } from './screens/legal.js';
@@ -45,6 +46,7 @@ const SCREENS = {
   tickets: renderTickets,
   order: renderOrder,
   scan: renderScan,
+  door: renderDoor,
   'my-music': renderMyMusic,
   'new-track': renderNewTrack,
   'edit-track': renderNewTrack,
