@@ -9,7 +9,7 @@ import { friendlyAuthError } from '../src/auth/errors.js';
 
 const NOW = Date.parse('2026-11-12T10:00:00+02:00');
 const MP4 = { type: 'video/mp4', size: 4_000_000 };
-const GOOD = { title: 'Jazz Night at the Yard', date: '2026-11-21', time: '19:00', venue: 'The Yard, Maboneng', category: 'music', description: '', clipFile: MP4, clipSeconds: 28 };
+const GOOD = { title: 'Jazz Night at the Yard', date: '2026-11-21', time: '19:00', endDate: '2026-11-21', endTime: '23:00', venue: 'The Yard, Maboneng', category: 'music', description: '', clipFile: MP4, clipSeconds: 28 };
 
 test('a complete event passes', () => {
   assert.deepEqual(checkEvent(GOOD, NOW), { ok: true, errors: {} });
@@ -18,7 +18,7 @@ test('a complete event passes', () => {
 test('an empty form reports every required field', () => {
   const { ok, errors } = checkEvent({ title: '', date: '', time: '', venue: '', category: null, description: '', clipFile: null, clipSeconds: null }, NOW);
   assert.equal(ok, false);
-  assert.deepEqual(Object.keys(errors).sort(), ['category', 'clip', 'start', 'title', 'venue']);
+  assert.deepEqual(Object.keys(errors).sort(), ['category', 'clip', 'end', 'start', 'title', 'venue']);
 });
 
 test('a clip of 30 seconds is accepted and a longer one is refused with how much to trim', () => {
@@ -111,4 +111,46 @@ test('database and storage errors get a clear message', () => {
   assert.match(friendlyAuthError({ message: 'The object exceeded the maximum allowed size' }), /too large/);
   assert.match(friendlyAuthError({ message: 'mime type image/png is not supported' }), /MP4, WebM or MOV/);
   assert.equal(friendlyAuthError({ code: 'review_not_applied' }), 'That event has already been reviewed.');
+});
+
+test('020: an event leaves public view the day after it happens; Host, Admins and ticket holders still see it', async () => {
+  const { readFileSync } = await import('node:fs');
+  const sql = readFileSync(new URL('../supabase/020_events_private_after.sql', import.meta.url), 'utf8');
+  assert.match(sql, /using \(status = 'live' and public\.event_still_public\(starts_at\)\)/);
+  assert.match(sql, /at time zone 'Africa\/Johannesburg'\)::date\s+>= \(now\(\) at time zone 'Africa\/Johannesburg'\)::date/);
+  assert.match(sql, /create policy "Ticket holders can see their events"[\s\S]*using \(public\.holds_ticket_for\(id\)\)/);
+  assert.match(sql, /security definer/);
+  assert.doesNotMatch(sql, /delete from public\.events/);
+});
+
+test('021: events have an end date and time and leave public view exactly then', async () => {
+  const { checkEnd, formatWhenRange, MAX_EVENT_DAYS, checkEvent } = await import('../src/events/rules.js');
+  assert.equal(MAX_EVENT_DAYS, 31);
+  assert.match(checkEnd('2027-01-15', '20:00', '', ''), /date the event ends/);
+  assert.match(checkEnd('2027-01-15', '20:00', '2027-01-15', ''), /end time/);
+  assert.match(checkEnd('2027-01-15', '20:00', '2027-01-15', '19:00'), /end after it starts/);
+  assert.match(checkEnd('2027-01-15', '20:00', '2027-01-15', '20:00'), /end after it starts/);
+  assert.equal(checkEnd('2027-01-15', '20:00', '2027-01-16', '02:00'), null, 'past midnight is fine');
+  assert.equal(checkEnd('2027-01-15', '10:00', '2027-01-17', '22:00'), null, 'a 3-day festival');
+  assert.match(checkEnd('2027-01-01', '10:00', '2027-02-02', '10:00'), /at most 31 days/);
+  assert.match(checkEnd('2027-01-15', '20:00', '2027-02-31', '10:00'), /real end date/);
+  const base = { title: 'Jazz night', date: '2027-01-15', time: '20:00', venue: 'Maboneng', category: 'music', description: '', clipFile: null, clipSeconds: null };
+  assert.match(checkEvent({ ...base }, Date.parse('2026-12-01'), { clipOptional: true }).errors.end, /date the event ends/);
+  assert.equal(checkEvent({ ...base, endDate: '2027-01-15', endTime: '23:00' }, Date.parse('2026-12-01'), { clipOptional: true }).errors.end, undefined);
+
+  assert.equal(formatWhenRange('2027-01-15T18:00:00Z', '2027-01-15T21:00:00Z'), 'Fri 15 Jan · 20:00–23:00');
+  assert.equal(formatWhenRange('2027-01-15T08:00:00Z', '2027-01-17T20:00:00Z'), 'Fri 15 Jan · 10:00 – Sun 17 Jan · 22:00');
+  assert.equal(formatWhenRange('2027-01-15T18:00:00Z', null), 'Fri 15 Jan · 20:00');
+
+  const { readFileSync } = await import('node:fs');
+  const sql = readFileSync(new URL('../supabase/021_event_end_time.sql', import.meta.url), 'utf8');
+  assert.match(sql, /using \(status = 'live' and public\.event_still_public\(ends_at\)\)/);
+  assert.match(sql, /select p_ends_at > now\(\);/);
+  assert.match(sql, /check \(ends_at > starts_at and ends_at <= starts_at \+ interval '31 days'\)/);
+  const dry = readFileSync(new URL('../supabase/tests/021_dryrun.sql', import.meta.url), 'utf8');
+  const body = sql.slice(sql.indexOf('begin;') + 6, sql.lastIndexOf('commit;'));
+  assert.ok(dry.includes(body), 'the dry run runs exactly the script');
+  const api = readFileSync(new URL('../src/events/api.js', import.meta.url), 'utf8');
+  assert.match(api, /ends_at: startsAtIso\(form\.endDate, form\.endTime\)/);
+  assert.match(api, /p_ends_at: startsAtIso\(form\.endDate, form\.endTime\)/);
 });

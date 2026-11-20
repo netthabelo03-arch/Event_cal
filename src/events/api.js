@@ -7,7 +7,7 @@ import { clipPath, startsAtIso } from './rules.js';
 import { cleanSearch } from './discovery.js';
 
 const BUCKET = 'clips';
-const COLUMNS = 'id, host_id, host_name, title, description, starts_at, venue, city, category, clip_path, clip_seconds, status, reject_reason, created_at, view_count, refund_days';
+const COLUMNS = 'id, host_id, host_name, title, description, starts_at, ends_at, venue, city, category, clip_path, clip_seconds, status, reject_reason, created_at, view_count, refund_days';
 
 /** @returns {Promise<boolean>} whether the signed-in person is an admin */
 export async function isAdmin() {
@@ -48,6 +48,7 @@ export async function createEvent(userId, hostName, form) {
       title: form.title.trim(),
       description: String(form.description ?? '').trim(),
       starts_at: startsAtIso(form.date, form.time),
+      ends_at: startsAtIso(form.endDate, form.endTime),
       venue: form.venue.trim(),
       category: form.category,
       clip_path: path,
@@ -84,6 +85,7 @@ export async function resubmitEvent(userId, eventId, form, ticketTypes) {
     p_tickets: ticketTypes.map(({ name, price_cents: priceCents, quantity }) => ({ name, price_cents: priceCents, quantity })),
     p_clip_path: path,
     p_clip_seconds: seconds,
+    p_ends_at: startsAtIso(form.endDate, form.endTime),
   });
   if (error) throw error;
 }
@@ -96,14 +98,14 @@ export async function listMyEvents(userId) {
   return data;
 }
 
-/** Live events that have not started yet, soonest first. Works signed out. */
+/** Live events that have not ended yet (upcoming or on now), soonest first. Works signed out. */
 export async function listLiveEvents(limit = 50) {
   const client = await getClient();
   const { data, error } = await client
     .from('events')
     .select(COLUMNS)
     .eq('status', 'live')
-    .gte('starts_at', new Date().toISOString())
+    .gt('ends_at', new Date().toISOString())
     .order('starts_at', { ascending: true })
     .limit(limit);
   if (error) throw error;
@@ -163,7 +165,8 @@ export async function reviewEvent(id, { approve, reason = '' }) {
  */
 export async function searchEvents({ text = '', category = null, from, to }) {
   const client = await getClient();
-  let query = client.from('events').select(COLUMNS).eq('status', 'live').gte('starts_at', from);
+  // Events still on during the chosen dates count too (a festival that started yesterday).
+  let query = client.from('events').select(COLUMNS).eq('status', 'live').gte('ends_at', from);
   if (to) query = query.lte('starts_at', to);
   if (category) query = query.eq('category', category);
   const words = cleanSearch(text);
@@ -176,7 +179,7 @@ export async function searchEvents({ text = '', category = null, from, to }) {
   return withPromoted(data, await promotedNow(client));
 }
 
-/** A host's upcoming live events, soonest first. */
+/** A host's live events that have not ended, soonest first. */
 export async function listHostEvents(hostId) {
   const client = await getClient();
   const { data, error } = await client
@@ -184,7 +187,7 @@ export async function listHostEvents(hostId) {
     .select(COLUMNS)
     .eq('host_id', hostId)
     .eq('status', 'live')
-    .gte('starts_at', new Date().toISOString())
+    .gt('ends_at', new Date().toISOString())
     .order('starts_at', { ascending: true });
   if (error) throw error;
   return data;

@@ -10,7 +10,7 @@ import { phonePanel } from '../reminders/panel.js';
 import { ticketsBox } from '../tickets/box.js';
 import { autoplayFull } from '../events/preview.js';
 import { MAX_CLIP_SECONDS } from '../rules/clip.js';
-import { CATEGORIES, formatWhen, isEventId, statusOf } from '../events/rules.js';
+import { CATEGORIES, formatWhen, formatWhenRange, isEventId, statusOf } from '../events/rules.js';
 import { friendlyAuthError } from '../auth/errors.js';
 import { findSample, initials } from '../sample.js';
 import { getTrack, listArtistTracks, listLiveTracks, recordPlay, audioUrl } from '../music/api.js';
@@ -155,7 +155,7 @@ async function realEvent(id, viewerId, navigate) {
     el('div', { class: 'stack' }, [
       el('p', { class: 'caption', text: categoryName ? `Event · ${categoryName}` : 'Event' }),
       el('h1', { class: 'title', text: event.title }),
-      el('p', { class: 'lead', text: `${formatWhen(event.starts_at)} · ${event.venue}, ${event.city}` }),
+      el('p', { class: 'lead', text: `${formatWhenRange(event.starts_at, event.ends_at)} · ${event.venue}, ${event.city}` }),
       el('p', { class: 'event-row__meta' }, ['Hosted by ', linkTo(`#/host/${event.host_id}`, event.host_name || 'a host')]),
     ]),
   );
