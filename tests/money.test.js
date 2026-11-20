@@ -33,7 +33,8 @@ test('the database works out the same booking fee as the app', () => {
 });
 
 test('Hosts choose the refund rule; the label says the booking fee is kept', () => {
-  assert.deepEqual(REFUND_CHOICES.map((choice) => choice.days), [null, 1, 3, 7, 14]);
+  assert.deepEqual(REFUND_CHOICES.map((choice) => choice.days), [null, 7, 14]);
+  assert.deepEqual(REFUND_CHOICES.map((choice) => choice.label), ['No refunds', 'Until 7 days before', 'Until 14 days before']);
   assert.equal(refundPolicyLabel(null), 'No refunds');
   assert.equal(refundPolicyLabel(undefined), 'No refunds');
   assert.match(refundPolicyLabel(1), /^Refunds until 1 day before the event/);
@@ -131,4 +132,20 @@ test('the checkout and webhook handle refunds, cancelling and payouts', () => {
   const webhook = read('../supabase/functions/paystack-webhook/index.ts');
   assert.match(webhook, /refundResultFrom\(event\)/);
   assert.equal(read('../supabase/functions/checkout/paystack.js'), read('../supabase/functions/paystack-webhook/paystack.js'), 'both functions share the same helpers');
+});
+
+test('030: older rules under 7 days become 7 in the database; buyers get the same', async () => {
+  const { readFileSync } = await import('node:fs');
+  const sql = readFileSync(new URL('../supabase/030_refund_choices.sql', import.meta.url), 'utf8');
+  assert.match(sql, /if new\.refund_days is not null and new\.refund_days < 7 then new\.refund_days := 7; end if;/);
+  assert.match(sql, /update public\.events set refund_days = 7 where refund_days is not null and refund_days < 7;/);
+  const { refundPercent } = await import('../src/rules/fees.js');
+  const start = '2027-01-31T18:00:00Z';
+  for (const daysBefore of [20, 14, 10, 7.01, 6.99, 5, 2, 0.5]) {
+    const now = Date.parse(start) - daysBefore * 24 * 3600 * 1000;
+    assert.equal(refundPercent(start, 1, now), refundPercent(start, 7, now), `${daysBefore} days before`);
+    assert.equal(refundPercent(start, 3, now), refundPercent(start, 7, now), `${daysBefore} days before`);
+  }
+  const dry = readFileSync(new URL('../supabase/tests/030_dryrun.sql', import.meta.url), 'utf8');
+  assert.ok(dry.includes(sql.slice(sql.indexOf('begin;') + 6, sql.lastIndexOf('commit;'))));
 });

@@ -40,7 +40,7 @@ test('buyers are told before paying when refunds are already closed; Hosts are w
   assert.deepEqual(refundNotice({ ...henny, refund_days: null }, now), { tone: 'bad', text: 'No refunds for these tickets.' });
   const artShow = { starts_at: '2026-11-30T11:49:00Z', refund_days: 3 };
   assert.deepEqual(refundNotice(artShow, now), { tone: 'good', text: 'Cancel now and get 25% of the ticket price back. No refunds from Mon 23 Nov · 13:49. The booking fee is not refunded.' });
-  assert.match(refundRuleWarning(henny.starts_at, 1, Date.parse('2026-11-20T13:01:00Z')), /"Until 1 day before", refunds would already be closed \(they ended Thu 19 Nov · 15:05\)/);
+  assert.match(refundRuleWarning(henny.starts_at, 7, Date.parse('2026-11-20T13:01:00Z')), /"Until 7 days before", refunds would already be closed \(they ended Fri 13 Nov · 15:05\)/);
   assert.equal(refundRuleWarning(artShow.starts_at, 3, now), null);
   assert.equal(refundRuleWarning(henny.starts_at, null, now), null, 'No refunds needs no warning');
   assert.equal(refundRuleWarning(null, 1, now), null, 'no start chosen yet');
