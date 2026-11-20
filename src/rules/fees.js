@@ -56,11 +56,12 @@ export function orderPrice(subtotalCents) {
 // gets everything back, fee included.
 // ---------------------------------------------------------------------------
 
-/** The refund rules a Host can pick. null means no refunds. */
+/**
+ * The refund rules a Host can pick. null means no refunds. Nothing is refunded
+ * in the last 7 days (REFUND_STEPS), so shorter rules are not offered (030).
+ */
 export const REFUND_CHOICES = [
   { days: null, label: 'No refunds' },
-  { days: 1, label: 'Until 1 day before' },
-  { days: 3, label: 'Until 3 days before' },
   { days: 7, label: 'Until 7 days before' },
   { days: 14, label: 'Until 14 days before' },
 ];
