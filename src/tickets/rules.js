@@ -120,6 +120,12 @@ export function availabilityLabel(type) {
   return step === null ? earlyWords(share) : `${step}% sold`;
 }
 
+/** The colour for one ticket type, as for an event: 'good' (tickets available), 'waiting' (selling fast or a step), 'bad' (sold out). */
+export function ticketTone(type) {
+  if (remaining(type) === 0) return 'bad';
+  return availabilityLabel(type) === 'Tickets available' ? 'good' : 'waiting';
+}
+
 /**
  * How full the bar under a ticket type is, in percent: the step when one is
  * shown, otherwise the real share (the bar carries no number), 100 when sold out.

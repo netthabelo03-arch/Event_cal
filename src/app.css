@@ -1147,3 +1147,9 @@ body.full .app { max-width: none; padding: 0; gap: 0; }
 }
 .feed__swipe:empty, .feed__swipe--gone { opacity: 0; }
 @media (prefers-reduced-motion: reduce) { .feed__tab, .feed__swipe { transition: none; } }
+
+/* Ticket box: the bar and its words match the sales labels elsewhere:
+   green "Tickets available", amber "Selling fast" and the 75–95% steps, red "Sold out". */
+.ticket-type--waiting .sold-meter__fill { background: var(--color-warning); }
+.ticket-type--waiting .ticket-type__text > .event-row__meta:not(.sold-meter__label--held) { color: var(--color-warning); font-weight: 600; }
+.ticket-type--good .ticket-type__text > .event-row__meta:not(.sold-meter__label--held) { color: var(--color-accent-hover); }
