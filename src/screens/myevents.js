@@ -147,9 +147,13 @@ function boostPanel(event) {
 
 /** Change the refund rule; only works until the first ticket is sold. */
 function refundRulePanel(event) {
-  const line = el('span', { class: 'event-row__meta', text: refundPolicyLabel(event.refund_days) });
+  const line = el('span', { class: 'event-row__meta', text: `Refunds: ${refundPolicyLabel(event.refund_days)}` });
   const change = el('button', { type: 'button', class: 'text-link', text: 'Change' });
-  const area = el('div', { class: 'link-row' }, [line, change]);
+  const area = el('div', { class: 'refund-rule' }, [line, change]);
+  const showLine = () => {
+    area.className = 'refund-rule';
+    area.replaceChildren(line, change);
+  };
   change.addEventListener('click', () => {
     const problem = el('p', { class: 'field__error', role: 'alert' });
     problem.hidden = true;
@@ -160,8 +164,8 @@ function refundRulePanel(event) {
         try {
           await setRefundDays(event.id, choice.days);
           event.refund_days = choice.days;
-          line.textContent = refundPolicyLabel(choice.days);
-          area.replaceChildren(line, change);
+          line.textContent = `Refunds: ${refundPolicyLabel(choice.days)}`;
+          showLine();
         } catch (error) {
           problem.textContent = moneyErrorMessage(error?.message);
           problem.hidden = false;
@@ -169,7 +173,15 @@ function refundRulePanel(event) {
       });
       return button;
     });
-    area.replaceChildren(el('div', { class: 'stack' }, [el('div', { class: 'pills' }, pills), problem]));
+    const close = el('button', { type: 'button', class: 'text-link', text: 'Leave it as it is' });
+    close.addEventListener('click', showLine);
+    area.className = 'refund-rule refund-rule--open';
+    area.replaceChildren(
+      el('span', { class: 'field__label', text: 'Until when can buyers cancel and get their money back?' }),
+      el('div', { class: 'pills' }, pills),
+      problem,
+      close,
+    );
   });
   return area;
 }
@@ -187,15 +199,19 @@ function takingsLine(event) {
   return line;
 }
 
-/** "Cancel event": two taps, then every buyer is refunded in full. */
+/**
+ * "Cancel event": two taps, then every buyer is refunded in full. It sits in
+ * its own area at the bottom of the event, set apart from everything else,
+ * so it cannot be tapped by mistake (for example instead of "No refunds").
+ */
 function cancelPanel(event, row) {
-  const open = el('button', { type: 'button', class: 'button button--danger button--small', text: 'Cancel event' });
-  const area = el('div', { class: 'stack' }, [open]);
+  const open = el('button', { type: 'button', class: 'button button--danger button--small', text: 'Cancel event…' });
+  const area = el('div', { class: 'event-row__danger' }, [open]);
   open.addEventListener('click', () => {
     const problem = el('p', { class: 'field__error', role: 'alert' });
     problem.hidden = true;
     const sure = el('button', { type: 'button', class: 'button button--danger', text: 'Yes, cancel and refund everyone' });
-    const keep = el('button', { type: 'button', class: 'text-link', text: 'Keep the event' });
+    const keep = el('button', { type: 'button', class: 'button button--quiet', text: 'No, keep the event' });
     keep.addEventListener('click', () => area.replaceChildren(open));
     sure.addEventListener('click', async () => {
       problem.hidden = true;
@@ -220,7 +236,7 @@ function cancelPanel(event, row) {
     area.replaceChildren(
       el('p', { class: 'event-row__meta', text: 'This cannot be undone. The event leaves Discover, every ticket stops working, and every buyer gets their money back in full, booking fee included. Refunds come out of your sales.' }),
       problem,
-      el('div', { class: 'link-row' }, [sure, keep]),
+      el('div', { class: 'confirm-row' }, [keep, sure]),
     );
   });
   return area;

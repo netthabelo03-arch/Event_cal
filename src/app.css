@@ -1041,3 +1041,16 @@ body.full .app { max-width: none; padding: 0; gap: 0; }
   box-shadow: 0 2px 8px rgb(0 0 0 / 0.5);
 }
 .card__trend { color: var(--color-accent-hover); }
+
+/* My events: the refund rule and "Cancel event" were too close together (20 Nov).
+   The refund rule is a labelled line; cancelling has its own area at the bottom,
+   set apart by space and a line, and its confirm buttons are well spaced. */
+.refund-rule { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.refund-rule--open { flex-direction: column; align-items: stretch; gap: 10px; padding: 12px; margin-top: 4px; border: 1px solid var(--color-line-strong); border-radius: var(--radius-card); }
+.refund-rule--open .text-link { align-self: flex-start; }
+.event-row__danger { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--color-line-strong); display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+.confirm-row { display: flex; flex-wrap: wrap; gap: 16px 24px; align-items: center; }
+@media (max-width: 480px) {
+  .confirm-row { flex-direction: column; align-items: stretch; }
+  .confirm-row .button { width: 100%; }
+}
