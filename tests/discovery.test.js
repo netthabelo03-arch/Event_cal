@@ -106,3 +106,13 @@ test('Trending: only Admins see the rank and the activity on a card', async () =
   assert.equal(trendingDetails(item, undefined), null);
   assert.deepEqual(trendingDetails(item, true), { rank: 1, label: trendingLabel(item) });
 });
+
+test('023: Trending keeps an event until it ends', async () => {
+  const { readFileSync } = await import('node:fs');
+  const sql = readFileSync(new URL('../supabase/023_trending_until_end.sql', import.meta.url), 'utf8');
+  assert.match(sql, /e\.status = 'live' and e\.cancelled_at is null and e\.ends_at > now\(\)/);
+  assert.doesNotMatch(sql, /e\.starts_at > now\(\)/);
+  assert.match(sql, /grant execute on function public\.trending_events\(integer\) to anon, authenticated;/);
+  const dry = readFileSync(new URL('../supabase/tests/023_dryrun.sql', import.meta.url), 'utf8');
+  assert.ok(dry.includes(sql.slice(sql.indexOf('begin;') + 6, sql.lastIndexOf('commit;'))), 'the dry run runs exactly the script');
+});
