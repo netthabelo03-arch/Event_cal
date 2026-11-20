@@ -11,8 +11,9 @@ import { el, linkTo, whileBusy } from '../dom.js';
 
 function salesChip(types) {
   const sales = eventSales(types);
-  if (!sales) return [];
-  return [el('span', { class: `chip chip--${sales.soldOut ? 'bad' : sales.percent >= 75 ? 'waiting' : 'good'}`, text: eventSalesLabel(sales) })];
+  const label = eventSalesLabel(sales);
+  if (!label) return [];
+  return [el('span', { class: `chip chip--${sales.soldOut ? 'bad' : 'waiting'}`, text: label })];
 }
 
 function reminderRow(userId, event, onRemoved) {

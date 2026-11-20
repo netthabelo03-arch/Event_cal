@@ -87,10 +87,28 @@ export function buyable(type) {
   return Math.max(0, remaining(type) - (type.held ?? 0));
 }
 
-/** "Sold out", or how much is sold, such as "45% sold". */
+/**
+ * The steps at which buyers are shown how much is sold, highest first. The
+ * percentage is of the tickets that can be sold (so 100% is sold out). Below
+ * 75% nothing is shown; above 95% nothing new is shown until "Sold out".
+ */
+export const SALES_STEPS = [95, 90, 85, 75];
+
+/** The step to show for a share of the sellable tickets: 75, 85, 90, 95, or null (show nothing). */
+export function salesStep(percentOfSellable) {
+  return SALES_STEPS.find((step) => percentOfSellable >= step) ?? null;
+}
+
+/** The share of a ticket type's sellable tickets that is sold, as a whole percentage (100 = sold out). */
+export function shareOfSellable(type) {
+  return Math.min(100, Math.floor((type.sold / sellable(type)) * 100));
+}
+
+/** "Sold out", a step such as "85% sold", or '' while under 75%. */
 export function availabilityLabel(type) {
   if (remaining(type) === 0) return 'Sold out';
-  return `${percentSold(type)}% sold`;
+  const step = salesStep(shareOfSellable(type));
+  return step === null ? '' : `${step}% sold`;
 }
 
 /** Said when the tickets left are all being paid for by other people right now. */
@@ -110,10 +128,13 @@ export function eventSales(types) {
   return { percent: soldOut ? SELL_LIMIT * 100 : Math.min(SELL_LIMIT * 100, Math.floor((sold / offered) * 100)), soldOut };
 }
 
-/** "Sold out" or "45% of tickets sold", for an event. */
+/** "Sold out", a step such as "85% of tickets sold", or '' (show nothing), for an event. */
 export function eventSalesLabel(sales) {
   if (!sales) return '';
-  return sales.soldOut ? 'Sold out' : `${sales.percent}% of tickets sold`;
+  if (sales.soldOut) return 'Sold out';
+  // sales.percent is of all tickets; steps are of the tickets that can be sold.
+  const step = salesStep(Math.floor((sales.percent * 100) / (SELL_LIMIT * 100)));
+  return step === null ? '' : `${step}% of tickets sold`;
 }
 
 /**

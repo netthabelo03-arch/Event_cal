@@ -121,7 +121,7 @@ async function folderNode({ event, tickets }, past, open) {
       el('span', { class: 'event-row__meta', text: `${formatWhen(event.starts_at)} · ${event.venue}` }),
       el('span', { class: 'event-row__meta', text: folderCount(tickets) }),
     ]),
-    ...(sales ? [el('span', { class: `chip chip--${sales.soldOut ? 'bad' : 'waiting'} folder__sales`, text: eventSalesLabel(sales) })] : []),
+    ...(eventSalesLabel(sales) ? [el('span', { class: `chip chip--${sales.soldOut ? 'bad' : 'waiting'} folder__sales`, text: eventSalesLabel(sales) })] : []),
   ]);
   const cards = await Promise.all(tickets.map((ticket, index) => ticketCard(ticket, past, index + 1, tickets.length)));
   const page = linkTo(`#/event/${event.id}`, 'Open the event');
