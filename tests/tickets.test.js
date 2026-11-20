@@ -192,16 +192,22 @@ test('the reminders job counts sales exactly as the app does, and words each mil
   for (const types of cases) assert.deepEqual(job.eventSales(types), eventSales(types), JSON.stringify(types));
   assert.equal(job.SELL_LIMIT, SELL_LIMIT);
   assert.equal(job.salesMilestone(null), 0);
-  assert.equal(job.salesMilestone({ percent: 49, soldOut: false }), 0);
-  assert.equal(job.salesMilestone({ percent: 50, soldOut: false }), 50);
-  assert.equal(job.salesMilestone({ percent: 89, soldOut: false }), 75);
-  assert.equal(job.salesMilestone({ percent: 90, soldOut: true }), 90);
+  assert.equal(job.salesMilestone({ percent: 50, soldOut: false }), 0, 'no alert at 50% any more (55% of what can be sold)');
+  assert.equal(job.salesMilestone({ percent: 67, soldOut: false }), 0, '74% of what can be sold');
+  assert.equal(job.salesMilestone({ percent: 68, soldOut: false }), 75);
+  assert.equal(job.salesMilestone({ percent: 77, soldOut: false }), 85);
+  assert.equal(job.salesMilestone({ percent: 81, soldOut: false }), 90);
+  assert.equal(job.salesMilestone({ percent: 86, soldOut: false }), 95);
+  assert.equal(job.salesMilestone({ percent: 89, soldOut: false }), 95);
+  assert.equal(job.salesMilestone({ percent: 90, soldOut: true }), 100);
+  assert.deepEqual(job.SALES_MILESTONES, [75, 85, 90, 95, 100]);
   const event = { id: 'e1', title: 'Rambo' };
-  assert.deepEqual(job.salesNotice(event, 75, false, 'https://x.test/app/'), { title: 'Rambo: 75% of tickets sold', body: 'Get your ticket before it sells out at 90%.', url: 'https://x.test/app/#/event/e1' });
-  assert.match(job.salesNotice(event, 50, true, '').body, /Your ticket is safe in My tickets/);
-  assert.equal(job.salesNotice(event, 90, true, '').title, 'Rambo is sold out');
-  assert.match(job.salesNotice(event, 90, false, '').body, /All tickets are gone/);
-  assert.match(job.salesEmail({ id: 'e1', title: '<b>x</b>' }, 50, false, '').html, /&lt;b&gt;x&lt;\/b&gt;: 50% of tickets sold/);
+  assert.deepEqual(job.salesNotice(event, 75, false, 'https://x.test/app/'), { title: 'Rambo: 75% of tickets sold', body: 'Get your ticket before it sells out.', url: 'https://x.test/app/#/event/e1' });
+  assert.equal(job.salesNotice(event, 95, false, '').title, 'Rambo: 95% of tickets sold');
+  assert.match(job.salesNotice(event, 85, true, '').body, /Your ticket is safe in My tickets/);
+  assert.equal(job.salesNotice(event, 100, true, '').title, 'Rambo is sold out');
+  assert.match(job.salesNotice(event, 100, false, '').body, /All tickets are gone/);
+  assert.match(job.salesEmail({ id: 'e1', title: '<b>x</b>' }, 85, false, '').html, /&lt;b&gt;x&lt;\/b&gt;: 85% of tickets sold/);
 });
 
 test('My tickets puts each event in its own folder', async () => {
@@ -294,4 +300,19 @@ test('the ticket box uses the same colours: green available, amber from 50% and 
   assert.equal(ticketTone({ quantity: 30, sold: 20 }), 'waiting', 'Selling fast');
   assert.equal(ticketTone({ quantity: 30, sold: 21 }), 'waiting', '75% sold');
   assert.equal(ticketTone({ quantity: 7, sold: 6 }), 'bad');
+});
+
+test('alerts go out at exactly the steps the app shows (75, 85, 90, 95, then sold out)', async () => {
+  const job = await import('../supabase/functions/send-reminders/schedule.js');
+  for (let sold = 0; sold <= 90; sold += 1) {
+    const types = [{ quantity: 100, sold }];
+    const shown = eventSalesLabel(eventSales(types));
+    const step = job.salesMilestone(job.eventSales(types));
+    if (step === 100) assert.equal(shown, 'Sold out');
+    else if (step > 0) assert.equal(shown, `${step}% of tickets sold`, `sold ${sold}`);
+    else assert.ok(!/%/.test(shown), `sold ${sold}: ${shown}`);
+  }
+  const sql = readFileSync(new URL('../supabase/019_sales_alert_steps.sql', import.meta.url), 'utf8');
+  assert.match(sql, /check \(sales_notice_pct in \(0, 75, 85, 90, 95, 100\)\)/);
+  assert.match(readFileSync(new URL('../supabase/functions/send-reminders/index.ts', import.meta.url), 'utf8'), /\.lt\('sales_notice_pct', 100\)/);
 });

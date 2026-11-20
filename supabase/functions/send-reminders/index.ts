@@ -103,7 +103,7 @@ export default {
         .select('id, title, starts_at, venue, city, host_name, sales_notice_pct, ticket_types(quantity, sold)')
         .eq('status', 'live')
         .gt('starts_at', new Date(now).toISOString())
-        .lt('sales_notice_pct', 90)
+        .lt('sales_notice_pct', 100)
         .limit(500);
       for (const event of events ?? []) {
         const milestone = salesMilestone(eventSales(event.ticket_types));
