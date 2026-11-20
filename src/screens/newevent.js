@@ -6,6 +6,7 @@
 import { MAX_CLIP_SECONDS, PREVIEW_SECONDS } from '../rules/clip.js';
 import { CATEGORIES, CLIP_TYPES, checkClip, checkEvent, johannesburgParts } from '../events/rules.js';
 import { createEvent, getEvent, resubmitEvent } from '../events/api.js';
+import { startClipUpload, uploadLabel, percentDone } from '../events/upload.js';
 import { addTicketTypes, listTicketTypes } from '../tickets/api.js';
 import { ticketEditor } from '../tickets/editor.js';
 import { REFUND_CHOICES } from '../rules/fees.js';
@@ -103,7 +104,38 @@ export async function renderNewEvent({ session, id = null }) {
   const clipStatus = el('p', { class: 'field__hint', text: editing ? 'Your current clip is kept unless you choose a new one.' : `The first ${PREVIEW_SECONDS} seconds is what people see in the feed. Put your hook there.` });
   const shapeHint = el('p', { class: 'field__hint', text: 'Tip: film upright (portrait), like a normal phone video, so your clip fills the whole screen in the feed. Clips filmed sideways are shown whole, with a blurred fill above and below.' });
   const clipError = errorLine();
+
+  // The clip starts uploading as soon as it passes the check, so it is
+  // usually finished by the time the host has filled in the details.
+  let upload = null;
+  let lastStatus = null;
+  const progressBar = el('progress', { class: 'upload__bar', max: '100', value: '0' });
+  const uploadText = el('p', { class: 'upload__text', role: 'status', 'aria-live': 'polite' });
+  const retryButton = el('button', { type: 'button', class: 'button button--quiet upload__retry', text: 'Try the upload again' });
+  const uploadBox = el('div', { class: 'upload' }, [progressBar, uploadText, retryButton]);
+  uploadBox.hidden = true;
+  retryButton.hidden = true;
+
+  const showUpload = (status) => {
+    lastStatus = status;
+    uploadBox.hidden = false;
+    uploadBox.dataset.state = status.state;
+    progressBar.value = status.state === 'done' ? 100 : percentDone(status.loaded ?? 0, status.total ?? 0);
+    uploadText.textContent = status.state === 'failed' && status.message ? status.message : uploadLabel(status);
+    retryButton.hidden = status.state !== 'failed';
+    if (submitWaiting) submitWaiting(status);
+  };
+  retryButton.addEventListener('click', () => { upload?.retry(); });
+
+  const stopUpload = () => {
+    upload?.cancel();
+    upload = null;
+    lastStatus = null;
+    uploadBox.hidden = true;
+  };
+
   clipInput.addEventListener('change', async () => {
+    stopUpload();
     clipFile = clipInput.files[0] ?? null;
     clipSeconds = null;
     clipError.set(null);
@@ -111,14 +143,26 @@ export async function renderNewEvent({ session, id = null }) {
       if (editing) clipStatus.textContent = 'Your current clip is kept unless you choose a new one.';
       return;
     }
+    const picked = clipFile;
     clipStatus.textContent = 'Checking the clip…';
-    clipSeconds = await readDuration(clipFile);
-    const problem = checkClip(clipFile, clipSeconds);
+    clipSeconds = await readDuration(picked);
+    if (picked !== clipFile) return; // another clip was chosen meanwhile
+    const problem = checkClip(picked, clipSeconds);
     clipError.set(problem);
     clipStatus.textContent = problem
-      ? clipFile.name
-      : `${clipFile.name} · ${Math.round(clipSeconds)}s, within the ${MAX_CLIP_SECONDS}s limit`;
+      ? picked.name
+      : `${picked.name} · ${Math.round(clipSeconds)}s, within the ${MAX_CLIP_SECONDS}s limit`;
+    if (!problem) upload = startClipUpload(session.user.id, picked, showUpload);
   });
+
+  // While the form is being sent, the button shows how much of the clip is left.
+  let submitWaiting = null;
+  async function uploadedPath() {
+    if (!upload) return null;
+    if (lastStatus?.state === 'failed') upload.retry();
+    const current = upload;
+    return current.done.then(() => current.path);
+  }
 
   // Details
   const title = field({ id: 'title', label: 'Event name' });
@@ -180,7 +224,7 @@ export async function renderNewEvent({ session, id = null }) {
     ...(editing ? [el('p', { class: 'message message--error', text: editing.reject_reason ? `Not approved: ${editing.reject_reason}` : 'This event was not approved.' })] : []),
     el('div', { class: 'field' }, [
       el('label', { for: 'clip', class: 'field__label', text: editing ? `New promo video (optional, at most ${MAX_CLIP_SECONDS} seconds)` : `Promo video (at most ${MAX_CLIP_SECONDS} seconds)` }),
-      shapeHint, clipInput, clipStatus, clipError.node,
+      shapeHint, clipInput, clipStatus, clipError.node, uploadBox,
     ]),
     title.node,
     el('div', { class: 'field-pair' }, [date.node, time.node]),
@@ -228,7 +272,20 @@ export async function renderNewEvent({ session, id = null }) {
       return;
     }
 
-    await whileBusy(submit, clipFile ? 'Uploading your clip…' : 'Sending…', async () => {
+    const busyText = clipFile && lastStatus?.state !== 'done' ? 'Finishing the clip upload…' : 'Sending…';
+    await whileBusy(submit, busyText, async () => {
+      submitWaiting = (status) => {
+        if (status.state === 'uploading') submit.textContent = `Finishing the clip upload… ${percentDone(status.loaded ?? 0, status.total ?? 0)}%`;
+        if (status.state === 'done') submit.textContent = 'Sending…';
+      };
+      try {
+        values.clipPath = await uploadedPath();
+      } catch (error) {
+        submitWaiting = null;
+        if (!error?.cancelled) message.show(lastStatus?.message ?? 'The clip could not be uploaded. Check your connection, then tap “Try the upload again”.');
+        return;
+      }
+      submitWaiting = null;
       if (editing) {
         try {
           await resubmitEvent(session.user.id, editing.id, values, ticketCheck.types);

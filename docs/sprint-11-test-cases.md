@@ -43,3 +43,15 @@ Before testing: `supabase/018_trending_resubmit_notice.sql` is run (dry run pass
 | S11-20 | File another; as admin, Keep with a note | The notification says "<track> stays live." and the note |
 | S11-21 | Wait another 10 minutes | No second notification for the same dispute |
 | S11-22 | After email is set up | The same answer arrives by email too |
+
+## Faster event upload (after Sprint 11)
+
+| # | Steps | Expected |
+|---|---|---|
+| U-1 | New event → choose a valid clip | Under the clip: a progress bar and "Uploading your clip… N% of X MB. Keep filling in the form." |
+| U-2 | Keep filling in the form while it uploads | The form works normally; the bar fills up to "Clip uploaded." |
+| U-3 | Submit after the clip says "Clip uploaded." | The event is saved within a moment ("Sending…"), with no wait for the video. |
+| U-4 | Submit while the clip is still uploading | The button shows "Finishing the clip upload… N%", then saves on its own. |
+| U-5 | Turn data off mid-upload, then back on | "The connection dropped. Trying the upload again…"; after 3 failed tries, "Try the upload again" shows and works. |
+| U-6 | Choose a clip, then choose a different one | The first upload stops; only the second one uploads and is used. |
+| U-7 | Edit and send back with a new clip | Same as U-1 to U-4. Without a new clip, no upload happens. |
