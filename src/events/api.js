@@ -23,18 +23,22 @@ export async function clipUrl(path) {
   return client.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
 }
 
+/** Upload a clip in one go (used when no background upload was started). */
+async function uploadClip(client, userId, file) {
+  const path = clipPath(userId, file.type, crypto.randomUUID());
+  const upload = await client.storage.from(BUCKET).upload(path, file, { contentType: file.type, upsert: false });
+  if (upload.error) throw upload.error;
+  return path;
+}
+
 /**
- * Upload the clip, then save the event for review.
+ * Save the event for review. The clip is normally uploaded already
+ * (form.clipPath, see upload.js); otherwise it is uploaded first.
  * @returns {Promise<object>} the saved event
  */
 export async function createEvent(userId, hostName, form) {
   const client = await getClient();
-  const path = clipPath(userId, form.clipFile.type, crypto.randomUUID());
-  const upload = await client.storage.from(BUCKET).upload(path, form.clipFile, {
-    contentType: form.clipFile.type,
-    upsert: false,
-  });
-  if (upload.error) throw upload.error;
+  const path = form.clipPath ?? await uploadClip(client, userId, form.clipFile);
 
   const { data, error } = await client
     .from('events')
@@ -65,10 +69,8 @@ export async function resubmitEvent(userId, eventId, form, ticketTypes) {
   const client = await getClient();
   let path = null;
   let seconds = null;
-  if (form.clipFile) {
-    path = clipPath(userId, form.clipFile.type, crypto.randomUUID());
-    const upload = await client.storage.from(BUCKET).upload(path, form.clipFile, { contentType: form.clipFile.type, upsert: false });
-    if (upload.error) throw upload.error;
+  if (form.clipPath || form.clipFile) {
+    path = form.clipPath ?? await uploadClip(client, userId, form.clipFile);
     seconds = Math.round(form.clipSeconds * 10) / 10;
   }
   const { error } = await client.rpc('resubmit_event', {
