@@ -10,7 +10,7 @@ import { phonePanel } from '../reminders/panel.js';
 import { ticketsBox } from '../tickets/box.js';
 import { autoplayFull } from '../events/preview.js';
 import { MAX_CLIP_SECONDS } from '../rules/clip.js';
-import { CATEGORIES, formatWhen, formatWhenRange, isEventId, statusOf } from '../events/rules.js';
+import { CATEGORIES, formatWhen, formatWhenRange, ticketsOnSale, isEventId, statusOf } from '../events/rules.js';
 import { friendlyAuthError } from '../auth/errors.js';
 import { findSample, initials } from '../sample.js';
 import { getTrack, listArtistTracks, listLiveTracks, recordPlay, audioUrl } from '../music/api.js';
@@ -160,9 +160,13 @@ async function realEvent(id, viewerId, navigate) {
     ]),
   );
   if (event.description) parts.push(el('p', { class: 'detail__text', text: event.description }));
-  if (event.status === 'live' && Date.parse(event.starts_at) > Date.now()) {
+  // Tickets are on sale until the event ends (a festival keeps selling while it runs).
+  if (event.status === 'live' && ticketsOnSale(event, Date.now())) {
     const tickets = await ticketsBox(event, navigate);
     if (tickets) parts.push(tickets);
+  }
+  // A reminder only makes sense before the event starts.
+  if (event.status === 'live' && Date.parse(event.starts_at) > Date.now()) {
     parts.push(await reminderBox(viewerId, event.id));
   }
   if (canReport(event, event.host_id, viewerId)) {
