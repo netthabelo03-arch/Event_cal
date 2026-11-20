@@ -92,15 +92,20 @@ export function pushPayload(event, appUrl) {
 
 // ---------------------------------------------------------------------------
 // Sales notices: people who set a reminder for an event, or hold a ticket for
-// it, are told as its tickets pass 50% sold, 75% sold and sold out (90%, where
-// sales stop). These match src/tickets/rules.js; a test checks they agree.
+// it, are told as its tickets pass 75%, 85%, 90% and 95% sold, then once more
+// when it is sold out. The percentages are of the tickets that can be sold
+// (90% of each ticket type), the same steps the app shows (src/tickets/rules.js);
+// a test checks they agree.
 // ---------------------------------------------------------------------------
 
 /** Share of each ticket type that can be sold. */
 export const SELL_LIMIT = 0.9;
 
-/** The points at which people are told, as percentages. 90 means sold out. */
-export const SALES_MILESTONES = [50, 75, 90];
+/** The points at which people are told, as percentages. 100 means sold out. */
+export const SALES_MILESTONES = [75, 85, 90, 95, 100];
+
+/** The same steps the app shows, highest first. */
+const STEPS = [95, 90, 85, 75];
 
 function sellable(type) {
   return Math.max(1, Math.floor(type.quantity * SELL_LIMIT));
@@ -119,13 +124,13 @@ export function eventSales(types) {
   return { percent: soldOut ? SELL_LIMIT * 100 : Math.min(SELL_LIMIT * 100, Math.floor((sold / offered) * 100)), soldOut };
 }
 
-/** The highest milestone an event has reached: 0, 50, 75, or 90 (sold out). */
+/** The highest milestone an event has reached: 0, 75, 85, 90, 95, or 100 (sold out). */
 export function salesMilestone(sales) {
   if (!sales) return 0;
-  if (sales.soldOut) return 90;
-  if (sales.percent >= 75) return 75;
-  if (sales.percent >= 50) return 50;
-  return 0;
+  if (sales.soldOut) return 100;
+  // sales.percent is of all tickets; the steps are of the tickets that can be sold.
+  const share = Math.floor((sales.percent * 100) / (SELL_LIMIT * 100));
+  return STEPS.find((step) => share >= step) ?? 0;
 }
 
 /**
@@ -134,14 +139,14 @@ export function salesMilestone(sales) {
  */
 export function salesNotice(event, milestone, holdsTicket, appUrl) {
   const url = eventUrl(appUrl, event.id);
-  if (milestone >= 90) {
+  if (milestone >= 100) {
     return holdsTicket
       ? { title: `${event.title} is sold out`, body: 'Good thing you have your ticket. It is in My tickets.', url }
       : { title: `${event.title} is sold out`, body: 'All tickets are gone. Keep your reminder to hear about the event.', url };
   }
   return holdsTicket
     ? { title: `${event.title}: ${milestone}% of tickets sold`, body: 'Your ticket is safe in My tickets. Tell your friends before it sells out.', url }
-    : { title: `${event.title}: ${milestone}% of tickets sold`, body: 'Get your ticket before it sells out at 90%.', url };
+    : { title: `${event.title}: ${milestone}% of tickets sold`, body: 'Get your ticket before it sells out.', url };
 }
 
 /** The same notice as an email. */
