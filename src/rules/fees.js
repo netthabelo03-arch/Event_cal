@@ -66,15 +66,14 @@ export const REFUND_CHOICES = [
 ];
 
 /**
- * How much of the ticket price comes back, by how close the event is (028).
+ * How much of the ticket price comes back, by how close the event is (028, 029).
+ * Under 7 days before the start, nothing.
  * Each step: from this many days before the start, this percentage. After the
  * Host's own refund rule closes, nothing. The database uses the same steps.
  */
 export const REFUND_STEPS = [
-  { days: 14, percent: 100 },
-  { days: 7, percent: 75 },
-  { days: 3, percent: 50 },
-  { days: 0, percent: 25 },
+  { days: 14, percent: 50 },
+  { days: 7, percent: 25 },
 ];
 
 /** The percentage of the ticket price a buyer gets back now; 0 when refunds are closed. */
@@ -101,7 +100,7 @@ export function nextRefundDrop(startsAt, refundDays, nowMs = Date.now()) {
 /** "No refunds", or "Refunds until 3 days before the event". */
 export function refundPolicyLabel(days) {
   if (!Number.isInteger(days)) return 'No refunds';
-  return `Refunds until ${days} ${days === 1 ? 'day' : 'days'} before the event, shrinking from 100% as it gets close (booking fee not refunded)`;
+  return `Refunds until ${days} ${days === 1 ? 'day' : 'days'} before the event, 50% of the ticket price from 14 days before, 25% from 7 days, nothing after (booking fee not refunded)`;
 }
 
 /** The last moment a buyer may ask for a refund, or null when the event has no refunds. */
