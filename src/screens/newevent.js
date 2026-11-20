@@ -4,7 +4,7 @@
 // that was not approved and sends it back for review.
 
 import { MAX_CLIP_SECONDS, FEED_SECONDS } from '../rules/clip.js';
-import { CATEGORIES, CLIP_TYPES, checkClip, checkEvent, johannesburgParts } from '../events/rules.js';
+import { CATEGORIES, CLIP_TYPES, checkClip, checkEvent, johannesburgParts, MAX_EVENT_DAYS } from '../events/rules.js';
 import { createEvent, getEvent, resubmitEvent } from '../events/api.js';
 import { startClipUpload, uploadLabel, percentDone } from '../events/upload.js';
 import { addTicketTypes, listTicketTypes } from '../tickets/api.js';
@@ -52,6 +52,8 @@ export function resubmitMessage(error) {
   const text = `${error?.message ?? ''} ${error?.code ?? ''}`;
   if (text.includes('not_rejected')) return 'This event is no longer waiting for changes. Open My events to see where it stands.';
   if (text.includes('start_in_past')) return 'The event must start in the future.';
+  if (text.includes('end_before_start')) return 'The event must end after it starts.';
+  if (text.includes('too_long')) return `An event can run for at most ${MAX_EVENT_DAYS} days.`;
   if (text.includes('has_orders')) return 'Tickets were already ordered for this event, so it cannot be changed here. Ask an admin for help.';
   if (text.includes('not_your_event')) return 'This event is not yours to edit.';
   return friendlyAuthError(error);
@@ -166,9 +168,19 @@ export async function renderNewEvent({ session, id = null }) {
 
   // Details
   const title = field({ id: 'title', label: 'Event name' });
-  const date = field({ id: 'date', label: 'Date', type: 'date' });
+  const date = field({ id: 'date', label: 'Start date', type: 'date' });
   const time = field({ id: 'time', label: 'Start time', type: 'time' });
   const startError = errorLine();
+  const endDate = field({ id: 'end-date', label: 'End date', type: 'date' });
+  const endTime = field({ id: 'end-time', label: 'End time', type: 'time' });
+  const endError = errorLine();
+  const endHint = el('p', { class: 'field__hint', text: `The event leaves Discover, search and the feed at this time. For a festival or conference over several days, choose the last day (up to ${MAX_EVENT_DAYS} days).` });
+  // A one-day event is the usual case: the end date follows the start date until the host changes it.
+  let endDateTouched = false;
+  endDate.input.addEventListener('input', () => { endDateTouched = true; });
+  date.input.addEventListener('change', () => {
+    if (!endDateTouched || !endDate.input.value || endDate.input.value < date.input.value) endDate.input.value = date.input.value;
+  });
   const venue = field({ id: 'venue', label: 'Venue' });
 
   let category = null;
@@ -212,6 +224,12 @@ export async function renderNewEvent({ session, id = null }) {
     title.input.value = editing.title;
     date.input.value = when.date;
     time.input.value = when.time;
+    if (editing.ends_at) {
+      const until = johannesburgParts(editing.ends_at);
+      endDate.input.value = until.date;
+      endTime.input.value = until.time;
+      endDateTouched = until.date !== when.date;
+    }
     venue.input.value = editing.venue;
     description.value = editing.description ?? '';
     category = editing.category;
@@ -229,6 +247,9 @@ export async function renderNewEvent({ session, id = null }) {
     title.node,
     el('div', { class: 'field-pair' }, [date.node, time.node]),
     startError.node,
+    el('div', { class: 'field-pair' }, [endDate.node, endTime.node]),
+    endHint,
+    endError.node,
     venue.node,
     el('div', { class: 'field' }, [
       el('span', { class: 'field__label', id: 'category-label', text: 'Category' }),
@@ -252,6 +273,8 @@ export async function renderNewEvent({ session, id = null }) {
       title: title.input.value,
       date: date.input.value,
       time: time.input.value,
+      endDate: endDate.input.value,
+      endTime: endTime.input.value,
       venue: venue.input.value,
       category,
       description: description.value,
@@ -263,6 +286,7 @@ export async function renderNewEvent({ session, id = null }) {
     clipError.set(errors.clip ?? null);
     title.setError(errors.title ?? null);
     startError.set(errors.start ?? null);
+    endError.set(errors.end ?? null);
     venue.setError(errors.venue ?? null);
     categoryError.set(errors.category ?? null);
     descriptionError.set(errors.description ?? null);

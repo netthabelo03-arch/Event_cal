@@ -8,7 +8,7 @@ import { ticketEditor } from '../tickets/editor.js';
 import { formatRand, moneyErrorMessage } from '../tickets/rules.js';
 import { startBoost, payDemoBoost, verifyBoost } from '../boosts/api.js';
 import { BOOST_OPTIONS, boostedUntil, boostedLabel, boostErrorMessage } from '../boosts/rules.js';
-import { statusOf, formatWhen } from '../events/rules.js';
+import { statusOf, formatWhen, formatWhenRange } from '../events/rules.js';
 import { viewsLabel } from '../events/discovery.js';
 import { friendlyAuthError } from '../auth/errors.js';
 import { loadViewer } from '../viewer.js';
@@ -246,7 +246,7 @@ function eventRow(event) {
   const status = statusOf(event.status);
   const lines = [
     el('span', { class: 'event-row__title', text: event.title }),
-    el('span', { class: 'event-row__meta', text: `${formatWhen(event.starts_at)} · ${event.venue}` }),
+    el('span', { class: 'event-row__meta', text: `${formatWhenRange(event.starts_at, event.ends_at)} · ${event.venue}` }),
     el('span', { class: `chip chip--${status.tone}`, text: status.label }),
   ];
   if (event.status === 'rejected' && event.reject_reason) {

@@ -107,7 +107,7 @@ test('S11 resend: Hosts edit a rejected event at #/edit-event/<id>', () => {
 });
 
 test('S11 resend: the clip may stay when editing; the date shows in Johannesburg time', () => {
-  const values = { title: 'Jazz night', date: '2099-01-02', time: '19:00', venue: 'Bassline', category: 'music', description: '', clipFile: null, clipSeconds: null };
+  const values = { title: 'Jazz night', date: '2099-01-02', time: '19:00', endDate: '2099-01-02', endTime: '23:30', venue: 'Bassline', category: 'music', description: '', clipFile: null, clipSeconds: null };
   assert.ok(checkEvent(values, Date.now()).errors.clip);
   assert.equal(checkEvent(values, Date.now(), { clipOptional: true }).ok, true);
   assert.deepEqual(johannesburgParts('2026-12-05T17:00:00Z'), { date: '2026-12-05', time: '19:00' });

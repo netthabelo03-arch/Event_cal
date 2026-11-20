@@ -6,7 +6,7 @@
 
 import { listLiveEvents, clipUrl } from '../events/api.js';
 import { listLiveTracks, audioUrl } from '../music/api.js';
-import { formatWhen } from '../events/rules.js';
+import { formatWhen, formatWhenRange } from '../events/rules.js';
 import { genreName } from '../music/rules.js';
 import { startFeed, attachBackdrop } from '../events/feed.js';
 import { SECTIONS, sectionIndex, sectionAt, sectionHash, trackSound } from '../events/sections.js';
@@ -44,7 +44,7 @@ async function eventSlide(event) {
       ...(event.promoted ? [el('span', { class: 'feed__promoted', text: 'Promoted' })] : []),
       el('span', { class: 'feed__host', text: event.host_name || 'A host' }),
       el('span', { class: 'feed__title', text: event.title }),
-      el('span', { class: 'feed__meta', text: `${formatWhen(event.starts_at)} · ${event.venue}` }),
+      el('span', { class: 'feed__meta', text: `${formatWhenRange(event.starts_at, event.ends_at)} · ${event.venue}` }),
       el('span', { class: 'feed__cta', text: 'Tap for details and the full clip' }),
     ],
   });

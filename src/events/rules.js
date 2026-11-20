@@ -78,6 +78,26 @@ export function checkStart(date, time, nowMs) {
   return null;
 }
 
+/** The longest an event may run, in days (a festival or a conference week). */
+export const MAX_EVENT_DAYS = 31;
+
+/**
+ * Check the end date and time against the start.
+ * @returns {string | null} what is wrong, or null
+ */
+export function checkEnd(startDate, startTime, endDate, endTime) {
+  if (!endDate) return 'Choose the date the event ends.';
+  if (!endTime) return 'Choose the end time.';
+  const end = startsAtIso(endDate, endTime);
+  if (end === null) return 'Enter a real end date and time.';
+  const start = startsAtIso(startDate, startTime);
+  if (start === null) return null; // the start's own message says what to fix
+  const length = new Date(end).getTime() - new Date(start).getTime();
+  if (length <= 0) return 'The event must end after it starts.';
+  if (length > MAX_EVENT_DAYS * 24 * 3600 * 1000) return `An event can run for at most ${MAX_EVENT_DAYS} days.`;
+  return null;
+}
+
 /**
  * Check the chosen clip file.
  * @param {{ type: string, size: number } | null} file
@@ -100,7 +120,7 @@ export function checkClip(file, seconds) {
  * Check the whole form.
  * @returns {{ ok: boolean, errors: Record<string, string> }}
  */
-export function checkEvent({ title, date, time, venue, category, description, clipFile, clipSeconds }, nowMs, { clipOptional = false } = {}) {
+export function checkEvent({ title, date, time, endDate, endTime, venue, category, description, clipFile, clipSeconds }, nowMs, { clipOptional = false } = {}) {
   const errors = {};
   const add = (field, message) => {
     if (message) errors[field] = message;
@@ -109,6 +129,7 @@ export function checkEvent({ title, date, time, venue, category, description, cl
   if (!(clipOptional && !clipFile)) add('clip', checkClip(clipFile, clipSeconds));
   add('title', checkTitle(title));
   add('start', checkStart(date, time, nowMs));
+  add('end', checkEnd(date, time, endDate, endTime));
   add('venue', checkVenue(venue));
   add('category', checkCategory(category));
   add('description', checkDescription(description));
@@ -138,6 +159,20 @@ export function formatWhen(iso) {
   if (Number.isNaN(date.getTime())) return '';
   const parts = Object.fromEntries(WHEN.formatToParts(date).map((part) => [part.type, part.value]));
   return `${parts.weekday} ${parts.day} ${parts.month} · ${parts.hour}:${parts.minute}`;
+}
+
+/**
+ * When an event runs: "Fri 4 Dec · 18:00–23:00" on one day,
+ * "Fri 4 Dec · 18:00 – Sun 6 Dec · 22:00" over several. Just the start without an end.
+ */
+export function formatWhenRange(startIso, endIso) {
+  const start = formatWhen(startIso);
+  if (!endIso) return start;
+  const end = formatWhen(endIso);
+  if (!start || !end) return start;
+  const [startDay] = start.split(' · ');
+  const [endDay, endTime] = end.split(' · ');
+  return startDay === endDay ? `${start}–${endTime}` : `${start} – ${end}`;
 }
 
 /** The storage path for a new clip: the host's own folder, a fresh name, the right ending. */

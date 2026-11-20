@@ -6,7 +6,7 @@ import { listTrackQueue, reviewTrack, audioUrl } from '../music/api.js';
 import { genreName, formatTime, MAX_AUDIO_SECONDS } from '../music/rules.js';
 import { listOpenDisputes, resolveDispute, isOverdue, disputeErrorMessage } from '../music/disputes.js';
 import { listOpenReports, resolveReport } from '../reports/reports.js';
-import { CATEGORIES, formatWhen } from '../events/rules.js';
+import { CATEGORIES, formatWhen, formatWhenRange } from '../events/rules.js';
 import { MAX_CLIP_SECONDS } from '../rules/clip.js';
 import { friendlyAuthError } from '../auth/errors.js';
 import { loadViewer } from '../viewer.js';
@@ -32,7 +32,7 @@ function eventAsItem(event) {
   const categoryName = CATEGORIES.find((item) => item.id === event.category)?.name ?? event.category;
   return {
     ...event,
-    lines: [`${formatWhen(event.starts_at)} · ${event.venue} · ${categoryName}`, `Posted by ${event.host_name || 'a host with no name yet'}`],
+    lines: [`${formatWhenRange(event.starts_at, event.ends_at)} · ${event.venue} · ${categoryName}`, `Posted by ${event.host_name || 'a host with no name yet'}`],
     text: event.description || 'No description.',
     who: 'host',
     decide: (choice) => reviewEvent(event.id, choice),
