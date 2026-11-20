@@ -3,7 +3,7 @@
 
 import { listTicketTypes, startCheckout } from './api.js';
 import { formatRand, availabilityLabel, cartSummary, maxFor, buyLabel, checkoutErrorMessage, remaining, buyable, meterPercent, ticketTone, HELD_NOTE } from './rules.js';
-import { orderPrice, refundPolicyLabel } from '../rules/fees.js';
+import { orderPrice, refundNotice } from '../rules/fees.js';
 import { el, icon, whileBusy } from '../dom.js';
 
 const MINUS = '<path d="M5 12h14"></path>';
@@ -114,6 +114,7 @@ export async function ticketsBox(event, navigate) {
     message,
     buy,
     el('p', { class: 'event-row__meta', text: 'Your tickets appear in My tickets after paying. The booking fee covers the card payment.' }),
-    el('p', { class: 'event-row__meta', text: refundPolicyLabel(event.refund_days) }),
+    // Said plainly before paying, including when refunds are already closed.
+    ((notice) => el('p', { class: `refund-notice refund-notice--${notice.tone}`, text: notice.text }))(refundNotice(event)),
   ]);
 }

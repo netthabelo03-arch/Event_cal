@@ -1162,3 +1162,8 @@ body.full .app { max-width: none; padding: 0; gap: 0; }
 .door-devices__qr { width: 180px; max-width: 100%; background: #fff; padding: 8px; border-radius: 8px; }
 .door-devices__qr svg { display: block; width: 100%; height: auto; }
 .door-devices__link { font-family: ui-monospace, monospace; font-size: 12px; word-break: break-all; color: var(--color-text-muted); }
+
+/* Refunds, said before paying */
+.refund-notice { font-size: 14px; }
+.refund-notice--good { color: var(--color-text-muted); }
+.refund-notice--bad { color: var(--color-warning); font-weight: 600; }

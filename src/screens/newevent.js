@@ -4,12 +4,12 @@
 // that was not approved and sends it back for review.
 
 import { MAX_CLIP_SECONDS, FEED_SECONDS } from '../rules/clip.js';
-import { CATEGORIES, CLIP_TYPES, checkClip, checkEvent, johannesburgParts, MAX_EVENT_DAYS } from '../events/rules.js';
+import { CATEGORIES, CLIP_TYPES, checkClip, checkEvent, johannesburgParts, MAX_EVENT_DAYS, startsAtIso } from '../events/rules.js';
 import { createEvent, getEvent, resubmitEvent } from '../events/api.js';
 import { startClipUpload, uploadLabel, percentDone } from '../events/upload.js';
 import { addTicketTypes, listTicketTypes } from '../tickets/api.js';
 import { ticketEditor } from '../tickets/editor.js';
-import { REFUND_CHOICES } from '../rules/fees.js';
+import { REFUND_CHOICES, refundRuleWarning } from '../rules/fees.js';
 import { friendlyAuthError } from '../auth/errors.js';
 import { loadViewer } from '../viewer.js';
 import { topBar } from '../usermenu.js';
@@ -206,13 +206,25 @@ export async function renderNewEvent({ session, id = null }) {
     button.addEventListener('click', () => {
       refundDays = choice.days;
       for (const other of refundButtons) other.setAttribute('aria-pressed', String(other === button));
+      showRefundWarning();
     });
     return button;
   });
+  // Warn when the chosen rule is already closed for the chosen start.
+  const refundWarning = el('p', { class: 'field__error', role: 'status' });
+  refundWarning.hidden = true;
+  function showRefundWarning() {
+    const warning = refundRuleWarning(startsAtIso(date.input.value, time.input.value), refundDays);
+    refundWarning.textContent = warning ?? '';
+    refundWarning.hidden = !warning;
+  }
+  date.input.addEventListener('change', showRefundWarning);
+  time.input.addEventListener('change', showRefundWarning);
   const refunds = el('div', { class: 'field' }, [
     el('span', { class: 'field__label', id: 'refund-label', text: 'Refunds' }),
     el('p', { class: 'field__hint', text: 'Until when can buyers cancel and get the ticket price back? Refunds come out of your sales. If you cancel the event, everyone is refunded in full. You can change this until the first ticket is sold.' }),
     el('div', { class: 'pills', role: 'group', 'aria-labelledby': 'refund-label' }, refundButtons),
+    refundWarning,
   ]);
 
   const message = messageBox();
@@ -236,6 +248,7 @@ export async function renderNewEvent({ session, id = null }) {
     categoryButtons.forEach((button, i) => button.setAttribute('aria-pressed', String(CATEGORIES[i].id === category)));
     refundDays = editing.refund_days ?? null;
     refundButtons.forEach((button, i) => button.setAttribute('aria-pressed', String(REFUND_CHOICES[i].days === refundDays)));
+    showRefundWarning();
   }
 
   const form = el('form', { class: 'form', novalidate: '' }, [
