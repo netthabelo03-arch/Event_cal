@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
 import {
-  SELL_LIMIT, sellable, percentSold, eventSales, eventSalesLabel,
+  SELL_LIMIT, sellable, percentSold, eventSales, eventSalesLabel, salesStep, shareOfSellable, SALES_STEPS,
   MAX_PER_ORDER, formatRand, parseRand, checkTicketTypes, remaining, availabilityLabel, cartSummary, maxFor, buyLabel, checkoutErrorMessage,
 } from '../src/tickets/rules.js';
 import { verifySignature, paidOrderFrom, isOrderId, returnUrl, paymentMode } from '../supabase/functions/paystack-webhook/paystack.js';
@@ -63,8 +63,8 @@ test('what is left of each ticket type', () => {
   // Sales stop at 90%: of 200 General tickets, 180 can be sold.
   assert.equal(remaining(GENERAL), 180);
   assert.equal(remaining({ ...GONE, sold: 7 }), 0);
-  assert.equal(availabilityLabel(GENERAL), '0% sold');
-  assert.equal(availabilityLabel(VIP), '82% sold');
+  assert.equal(availabilityLabel(GENERAL), '', 'nothing shows under 75%');
+  assert.equal(availabilityLabel(VIP), '90% sold', '33 of the 36 that can be sold is 91%');
   assert.equal(availabilityLabel(GONE), 'Sold out');
 });
 
@@ -158,8 +158,8 @@ test('sales stop at 90%, and the percentage never shows more than 90', () => {
   assert.equal(sellable({ quantity: 7 }), 6);
   assert.equal(sellable({ quantity: 1 }), 1, 'a single ticket can still be sold');
   const fifty = { quantity: 50, sold: 0 };
-  assert.equal(availabilityLabel({ ...fifty, sold: 10 }), '20% sold');
-  assert.equal(availabilityLabel({ ...fifty, sold: 44 }), '88% sold');
+  assert.equal(availabilityLabel({ ...fifty, sold: 10 }), '');
+  assert.equal(availabilityLabel({ ...fifty, sold: 44 }), '95% sold', '44 of 45 is 97%: 95% shows until sold out');
   assert.equal(remaining({ ...fifty, sold: 44 }), 1);
   assert.equal(availabilityLabel({ ...fifty, sold: 45 }), 'Sold out', 'at 90% it is sold out');
   assert.equal(percentSold({ quantity: 1, sold: 1 }), 90, 'never above 90');
@@ -171,7 +171,9 @@ test('sales for a whole event, over all its ticket types', () => {
   assert.equal(eventSales(null), null);
   assert.deepEqual(eventSales([{ quantity: 50, sold: 10 }, { quantity: 50, sold: 30 }]), { percent: 40, soldOut: false });
   assert.deepEqual(eventSales([{ quantity: 50, sold: 45 }, { quantity: 10, sold: 9 }]), { percent: 90, soldOut: true });
-  assert.equal(eventSalesLabel({ percent: 40, soldOut: false }), '40% of tickets sold');
+  assert.equal(eventSalesLabel({ percent: 40, soldOut: false }), '');
+  assert.equal(eventSalesLabel({ percent: 72, soldOut: false }), '75% of tickets sold', '72% of all is 80% of what can be sold');
+  assert.equal(eventSalesLabel({ percent: 81, soldOut: false }), '90% of tickets sold');
   assert.equal(eventSalesLabel({ percent: 90, soldOut: true }), 'Sold out');
   assert.equal(eventSalesLabel(null), '');
 });
@@ -232,7 +234,7 @@ test('tickets held by other people\'s unfinished checkouts cannot be chosen (D-0
   assert.equal(remaining(rambo), 1);
   assert.equal(buyable(rambo), 0);
   assert.equal(maxFor(rambo, {}), 0, 'the + button stays off');
-  assert.equal(availabilityLabel(rambo), '71% sold', 'it is not sold out');
+  assert.equal(availabilityLabel(rambo), '75% sold', 'it is not sold out (5 of 6 is 83%: the 75% step)');
   assert.match(HELD_NOTE, /come back within 30 minutes/);
   assert.equal(buyable({ ...rambo, held: 0 }), 1);
   assert.equal(buyable({ ...rambo, held: undefined }), 1);
@@ -243,4 +245,26 @@ test('tickets held by other people\'s unfinished checkouts cannot be chosen (D-0
   assert.match(sql, /raise exception 'tickets_held'/);
   assert.match(sql, /o\.buyer_id is distinct from auth\.uid\(\)/);
   assert.ok(sql.indexOf("set status = 'failed'") < sql.indexOf('insert into public.orders'), 'own holds are let go before the new order is counted');
+});
+
+test('how much is sold shows only at 75, 85, 90 and 95%, then nothing new until sold out', () => {
+  assert.deepEqual(SALES_STEPS, [95, 90, 85, 75]);
+  const shown = (pct) => salesStep(pct);
+  assert.equal(shown(0), null);
+  assert.equal(shown(74), null);
+  assert.equal(shown(75), 75);
+  assert.equal(shown(84), 75);
+  assert.equal(shown(85), 85);
+  assert.equal(shown(89), 85);
+  assert.equal(shown(90), 90);
+  assert.equal(shown(94), 90);
+  assert.equal(shown(95), 95);
+  assert.equal(shown(99), 95);
+  // 100 tickets: 90 can be sold. Walk through every sale.
+  const labels = new Set();
+  for (let sold = 0; sold <= 90; sold += 1) labels.add(availabilityLabel({ quantity: 100, sold }));
+  assert.deepEqual([...labels], ['', '75% sold', '85% sold', '90% sold', '95% sold', 'Sold out']);
+  assert.equal(shareOfSellable({ quantity: 100, sold: 68 }), 75);
+  assert.equal(availabilityLabel({ quantity: 100, sold: 67 }), '');
+  assert.equal(availabilityLabel({ quantity: 100, sold: 68 }), '75% sold');
 });
