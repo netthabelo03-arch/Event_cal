@@ -201,6 +201,14 @@ A person switches to **Artist** in their profile and opens **My music** from the
 - People who set a reminder for an event, or hold a ticket for it, get a phone notification (and an email, once email is set up) when its tickets pass **50%**, **75%** and **sold out**, once each. The reminders job sends these every 5 minutes.
 - **My tickets** has one folder per event with its tickets inside. "See my tickets" after buying opens that event's folder.
 
+## Sprint 11: Trending, sending events back, dispute answers, clip colours
+
+- **Feed text in the clip's colours:** the words over each clip take their colours from the video, as in the big short-video apps. The Host's name and highlights use the clip's most vivid colour, made light enough to read (at least 4.5:1 contrast). The fade under the words is a dark shade of the clip, stronger when the clip is bright. The colours glide as clips change. Grey clips keep the plusespot green. The music player does the same. Code: `src/events/palette.js`.
+- **Trending this week** on Discover: a numbered grid of live events ranked by views and tickets sold in the last 7 days (a ticket = 10 views; newer days count more; boosts do not count). Hidden until 3 events have activity.
+- **Hosts send a rejected event back:** "Edit and send back" in My events opens the form filled in; the clip stays unless a new one is chosen; ticket types can be changed (only before any order).
+- **Dispute answers:** the Artist gets a phone notification (and an email once email is set up) when an admin answers their dispute, once.
+- Database: `supabase/018_trending_resubmit_notice.sql` (dry run `supabase/tests/018_dryrun.sql`, 9 checks). Test cases: `docs/sprint-11-test-cases.md`.
+
 ## Opening the app
 
 The app must be opened through a web address, not by double-clicking `index.html`; browsers block this kind of JavaScript when a file is opened directly.
