@@ -3,7 +3,7 @@
 // The same form, opened with an event's id (#/edit-event/<id>), edits an event
 // that was not approved and sends it back for review.
 
-import { MAX_CLIP_SECONDS, PREVIEW_SECONDS } from '../rules/clip.js';
+import { MAX_CLIP_SECONDS, FEED_SECONDS } from '../rules/clip.js';
 import { CATEGORIES, CLIP_TYPES, checkClip, checkEvent, johannesburgParts } from '../events/rules.js';
 import { createEvent, getEvent, resubmitEvent } from '../events/api.js';
 import { startClipUpload, uploadLabel, percentDone } from '../events/upload.js';
@@ -101,7 +101,7 @@ export async function renderNewEvent({ session, id = null }) {
   let clipFile = null;
   let clipSeconds = null;
   const clipInput = el('input', { id: 'clip', type: 'file', accept: Object.keys(CLIP_TYPES).join(','), class: 'file-input' });
-  const clipStatus = el('p', { class: 'field__hint', text: editing ? 'Your current clip is kept unless you choose a new one.' : `The first ${PREVIEW_SECONDS} seconds is what people see in the feed. Put your hook there.` });
+  const clipStatus = el('p', { class: 'field__hint', text: editing ? 'Your current clip is kept unless you choose a new one.' : `The first ${FEED_SECONDS} seconds is what people see in the feed. Put your hook there.` });
   const shapeHint = el('p', { class: 'field__hint', text: 'Tip: film upright (portrait), like a normal phone video, so your clip fills the whole screen in the feed. Clips filmed sideways are shown whole, with a blurred fill above and below.' });
   const clipError = errorLine();
 

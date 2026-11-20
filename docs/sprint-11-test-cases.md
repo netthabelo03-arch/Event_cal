@@ -55,3 +55,16 @@ Before testing: `supabase/018_trending_resubmit_notice.sql` is run (dry run pass
 | U-5 | Turn data off mid-upload, then back on | "The connection dropped. Trying the upload again…"; after 3 failed tries, "Try the upload again" shows and works. |
 | U-6 | Choose a clip, then choose a different one | The first upload stops; only the second one uploads and is used. |
 | U-7 | Edit and send back with a new clip | Same as U-1 to U-4. Without a new clip, no upload happens. |
+## Feed: 10-second clips and a Music section (after Sprint 11)
+
+| # | Steps | Expected |
+|---|---|---|
+| F-1 | Open the feed | Tabs "Events | Music" at the top, Events selected. Each event clip plays 10 seconds, then the next. A hint says "Swipe left for Music". |
+| F-2 | Swipe left | Music opens (address `#/feed/music`); event clips stop; artists' tracks play their picture, 10 seconds each. |
+| F-3 | Tap "Tap for sound" | The track's music plays (its audio, or the video's own sound if it has no audio). The button reads "Sound on". Sound stays on from track to track. |
+| F-4 | Swipe right, or tap "Events" | Back on Events; the music stops. |
+| F-5 | Tap a track | Its page opens with the full track (sign-in asked if signed out). |
+| F-6 | Open `#/feed/music` directly | The feed opens on Music. |
+| F-7 | No approved tracks | Music shows "No music yet". |
+| F-8 | On a computer | Left and right arrow keys switch sections. |
+| F-9 | Discover rows | Card previews still change every 5 seconds. |

@@ -30,6 +30,9 @@ export const SHOWCASE_SCREENS = [...GUEST_SCREENS, 'new-password'];
 /** Screens that use the full width on big screens. */
 export const WIDE_SCREENS = ['discover', 'detail', 'search'];
 
+/** The feed's sections besides Events, which is the plain "#/feed". */
+export const FEED_SECTIONS = ['music'];
+
 /** Screens that fill the whole window, edge to edge. */
 export const FULL_SCREENS = ['feed'];
 
@@ -41,6 +44,10 @@ export function parseRoute(hash) {
   const parts = String(hash ?? '').replace(/^#/, '').split('/').filter(Boolean);
   if (parts.length === 1 && NAMED_SCREENS.includes(parts[0])) {
     return { screen: parts[0] };
+  }
+  if (parts.length === 2 && parts[0] === 'feed' && FEED_SECTIONS.includes(parts[1])) {
+    // The feed opened on its Music section.
+    return { screen: 'feed', id: parts[1] };
   }
   if (parts.length === 2 && parts[0] === 'order' && ORDER_ID.test(parts[1])) {
     return { screen: 'order', id: parts[1] };
@@ -85,6 +92,7 @@ export function hashFor(route) {
   if (route.screen === 'tickets' && route.id) return `#/tickets/${route.id}`;
   if (route.screen === 'edit-track') return `#/edit-track/${route.id}`;
   if (route.screen === 'edit-event') return `#/edit-event/${route.id}`;
+  if (route.screen === 'feed' && FEED_SECTIONS.includes(route.id)) return `#/feed/${route.id}`;
   return `#/${route.screen}`;
 }
 
