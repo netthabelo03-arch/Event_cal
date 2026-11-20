@@ -39,9 +39,9 @@ begin
   select host_id into v_host from public.events limit 1;
   if v_host is null then raise exception 'no events to test with'; end if;
   insert into public.events (host_id, host_name, title, description, starts_at, venue, category, clip_path, clip_seconds, status)
-    values (v_host, 'Dry run', 'Dry run past', '', v_today - interval '1 day', 'Here', 'music', 'x/y.mp4', 5, 'live') returning id into v_past;
+    values (v_host, 'Dry run', 'Dry run past', '', v_today - interval '1 day', 'Here', 'music', v_host::text || '/dryrun.mp4', 5, 'live') returning id into v_past;
   insert into public.events (host_id, host_name, title, description, starts_at, venue, category, clip_path, clip_seconds, status)
-    values (v_host, 'Dry run', 'Dry run future', '', v_today + interval '1 day', 'Here', 'music', 'x/y.mp4', 5, 'live') returning id into v_future;
+    values (v_host, 'Dry run', 'Dry run future', '', v_today + interval '1 day', 'Here', 'music', v_host::text || '/dryrun.mp4', 5, 'live') returning id into v_future;
 
   -- As the public (signed out).
   execute 'set local role anon';
