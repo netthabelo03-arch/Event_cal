@@ -49,7 +49,9 @@ test('a buyer may cancel only their own paid order, inside the window, with no t
   assert.equal(canAskRefund(order, event, now), true);
   assert.equal(canAskRefund(order, { ...event, refund_days: null }, now), false, 'no refunds');
   assert.equal(canAskRefund(order, event, Date.parse('2026-12-07T18:00:00Z')), false, 'deadline reached');
-  assert.equal(canAskRefund(order, event, Date.parse('2026-12-07T17:59:00Z')), true, 'a minute before the deadline');
+  // Nothing comes back in the last 7 days (029), so the window shuts 7 days before here.
+  assert.equal(canAskRefund(order, event, Date.parse('2026-12-03T18:00:00Z')), true, 'exactly 7 days before: 25%');
+  assert.equal(canAskRefund(order, event, Date.parse('2026-12-03T18:01:00Z')), false, 'under 7 days: nothing');
   assert.equal(canAskRefund({ ...order, status: 'pending' }, event, now), false);
   assert.equal(canAskRefund({ ...order, refund_status: 'pending' }, event, now), false, 'already asked');
   assert.equal(canAskRefund({ ...order, total_cents: 0 }, event, now), false, 'free');

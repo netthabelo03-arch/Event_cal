@@ -222,7 +222,7 @@ export async function renderNewEvent({ session, id = null }) {
   time.input.addEventListener('change', showRefundWarning);
   const refunds = el('div', { class: 'field' }, [
     el('span', { class: 'field__label', id: 'refund-label', text: 'Refunds' }),
-    el('p', { class: 'field__hint', text: 'Until when can buyers cancel? What they get back shrinks as the event gets close: 100% of the ticket price 14 or more days before, 75% from 14 days, 50% from 7 days, 25% from 3 days, until the day you choose here. The booking fee is never refunded; what is not refunded stays yours. If you cancel the event, everyone gets everything back. You can change this until the first ticket is sold.' }),
+    el('p', { class: 'field__hint', text: 'Until when can buyers cancel? What they get back: 50% of the ticket price 14 or more days before the event, 25% from 14 to 7 days before, and nothing in the last 7 days (or earlier, if the day you choose here comes first). The booking fee is never refunded; what is not refunded stays yours. If you cancel the event, everyone gets everything back. You can change this until the first ticket is sold.' }),
     el('div', { class: 'pills', role: 'group', 'aria-labelledby': 'refund-label' }, refundButtons),
     refundWarning,
   ]);
