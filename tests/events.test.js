@@ -155,25 +155,28 @@ test('021: events have an end date and time and leave public view exactly then',
   assert.match(api, /p_ends_at: startsAtIso\(form\.endDate, form\.endTime\)/);
 });
 
-test('026: a Host moves the end time of their event; earlier only while no tickets are sold', async () => {
-  const { checkNewEnd, endChangeMessage } = await import('../src/events/rules.js');
+test('026: a Host asks to extend an event; only an Admin approval moves the end time', async () => {
+  const { checkExtension, extensionMessage, extensionStatus } = await import('../src/events/rules.js');
   const event = { starts_at: '2027-01-15T08:00:00Z', ends_at: '2027-01-15T20:00:00Z' };
-  const now = Date.parse('2027-01-10T10:00:00Z');
-  assert.equal(checkNewEnd(event, '2027-01-17', '22:00', now, true), null, 'a festival adds two days');
-  assert.match(checkNewEnd(event, '2027-01-15', '18:00', now, true), /only end later/);
-  assert.equal(checkNewEnd(event, '2027-01-15', '18:00', now, false), null, 'earlier is fine with nothing sold');
-  assert.match(checkNewEnd(event, '2027-01-15', '09:00', now, false), /end after it starts/);
-  assert.match(checkNewEnd(event, '2027-02-16', '10:00', now, false), /at most 31 days/);
-  assert.match(checkNewEnd(event, '2027-01-17', '22:00', Date.parse('2027-01-18T00:00:00Z'), false), /in the future/);
-  assert.match(checkNewEnd(event, '', '', now, false), /Choose/);
-  assert.match(endChangeMessage({ message: 'has_tickets' }), /only end later/);
-  assert.match(endChangeMessage({ message: 'event_over' }), /already ended/);
-  assert.match(endChangeMessage({}), /could not be saved/);
+  assert.equal(checkExtension(event, '2027-01-17', '22:00', 'The festival adds two days'), null);
+  assert.match(checkExtension(event, '2027-01-15', '18:00', 'Shorter'), /only be extended/);
+  assert.match(checkExtension(event, '2027-01-15', '22:00', 'Shorter'), /only be extended/, '22:00 Johannesburg is 20:00 UTC, the current end');
+  assert.match(checkExtension(event, '2027-02-16', '10:00', 'Long one'), /at most 31 days/);
+  assert.match(checkExtension(event, '2027-01-17', '22:00', ' ok '), /why the event needs more time/);
+  assert.match(checkExtension(event, '', '', 'reason here'), /Choose/);
+  assert.match(extensionMessage({ message: 'already_asked' }), /already asked/);
+  assert.match(extensionMessage({ message: 'note_needed' }), /why the request is declined/);
+  assert.match(extensionMessage({}), /did not go through/);
+  assert.equal(extensionStatus(null), null);
+  assert.deepEqual(extensionStatus({ status: 'pending', requested_ends_at: '2027-01-17T20:00:00Z' }), { tone: 'waiting', text: 'Asked to extend until Sun 17 Jan · 22:00. Waiting for an admin.' });
+  assert.equal(extensionStatus({ status: 'declined', requested_ends_at: '2027-01-17T20:00:00Z', decision_note: 'Venue booked' }).text, 'Extension until Sun 17 Jan · 22:00 not approved: Venue booked');
+  assert.equal(extensionStatus({ status: 'approved', requested_ends_at: '2027-01-17T20:00:00Z' }).tone, 'good');
   const { readFileSync } = await import('node:fs');
-  const sql = readFileSync(new URL('../supabase/026_host_end_time.sql', import.meta.url), 'utf8');
-  assert.match(sql, /if not found or e\.host_id <> caller then raise exception 'not_your_event'/);
-  assert.match(sql, /if p_ends_at < e\.ends_at and exists \(select 1 from public\.tickets t where t\.event_id = e\.id\)/);
-  assert.match(sql, /revoke all on function public\.set_event_end\(uuid, timestamptz\) from public, anon;/);
+  const sql = readFileSync(new URL('../supabase/026_end_time_requests.sql', import.meta.url), 'utf8');
+  assert.match(sql, /if not public\.is_admin\(\) then raise exception 'not_admin'/);
+  assert.match(sql, /if p_ends_at is null or p_ends_at <= e\.ends_at then raise exception 'not_later'/);
+  assert.match(sql, /create unique index if not exists event_end_requests_one_open on public\.event_end_requests \(event_id\) where status = 'pending'/);
+  assert.doesNotMatch(sql, /set_event_end/, 'Hosts cannot change it directly');
   const dry = readFileSync(new URL('../supabase/tests/026_dryrun.sql', import.meta.url), 'utf8');
   assert.ok(dry.includes(sql.slice(sql.indexOf('begin;') + 6, sql.lastIndexOf('commit;'))));
 });

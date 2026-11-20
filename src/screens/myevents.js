@@ -1,14 +1,14 @@
 // My events: a host's own events with their review status, and the way in
 // to posting a new one.
 
-import { listMyEvents, setEventEnd } from '../events/api.js';
+import { listMyEvents, requestEventEnd, latestEndRequest } from '../events/api.js';
 import { addTicketTypes, cancelEvent, eventTakings, getMyPayout, setRefundDays } from '../tickets/api.js';
 import { REFUND_CHOICES, refundPolicyLabel } from '../rules/fees.js';
 import { ticketEditor } from '../tickets/editor.js';
 import { formatRand, moneyErrorMessage } from '../tickets/rules.js';
 import { startBoost, payDemoBoost, verifyBoost } from '../boosts/api.js';
 import { BOOST_OPTIONS, boostedUntil, boostedLabel, boostErrorMessage } from '../boosts/rules.js';
-import { statusOf, formatWhen, formatWhenRange, johannesburgParts, startsAtIso, checkNewEnd, endChangeMessage } from '../events/rules.js';
+import { statusOf, formatWhen, formatWhenRange, johannesburgParts, startsAtIso, checkExtension, extensionMessage, extensionStatus } from '../events/rules.js';
 import { viewsLabel } from '../events/discovery.js';
 import { friendlyAuthError } from '../auth/errors.js';
 import { loadViewer } from '../viewer.js';
@@ -186,53 +186,70 @@ function refundRulePanel(event) {
   return area;
 }
 
-/** "Ends: …" with Change: the Host moves the end time (later, or earlier while nothing is sold). */
-function endTimePanel(event, hasSold, onChange) {
+/**
+ * "Ends: …" with "Ask to extend": the Host asks an Admin for a later end time
+ * (026). The answer shows here: waiting, approved, or not approved with the
+ * Admin's note.
+ */
+function endTimePanel(event) {
   const line = el('span', { class: 'event-row__meta', text: `Ends: ${formatWhen(event.ends_at)}` });
-  const change = el('button', { type: 'button', class: 'text-link', text: 'Change' });
-  const area = el('div', { class: 'refund-rule' }, [line, change]);
+  const ask = el('button', { type: 'button', class: 'text-link', text: 'Ask to extend' });
+  const status = el('span', { class: 'chip' });
+  status.hidden = true;
+  const area = el('div', { class: 'refund-rule' }, [line, ask, status]);
+  const showStatus = (request) => {
+    const shown = extensionStatus(request);
+    status.hidden = !shown;
+    if (shown) {
+      status.className = `chip chip--${shown.tone}`;
+      status.textContent = shown.text;
+    }
+    // One open request at a time.
+    ask.hidden = request?.status === 'pending';
+  };
   const showLine = () => {
     area.className = 'refund-rule';
-    line.textContent = `Ends: ${formatWhen(event.ends_at)}`;
-    area.replaceChildren(line, change);
+    area.replaceChildren(line, ask, status);
   };
-  change.addEventListener('click', () => {
+  latestEndRequest(event.id).then(showStatus).catch(() => {});
+  ask.addEventListener('click', () => {
     const now = johannesburgParts(event.ends_at);
     const date = el('input', { type: 'date', class: 'input', value: now.date, 'aria-label': 'New end date' });
     const time = el('input', { type: 'time', class: 'input', value: now.time, 'aria-label': 'New end time' });
+    const reason = el('textarea', { class: 'input input--area', rows: '2', maxlength: '500', 'aria-label': 'Why the event needs more time' });
     const problem = el('p', { class: 'field__error', role: 'alert' });
     problem.hidden = true;
-    const save = el('button', { type: 'button', class: 'button button--primary button--small', text: 'Save end time' });
+    const send = el('button', { type: 'button', class: 'button button--primary button--small', text: 'Send request' });
     const close = el('button', { type: 'button', class: 'text-link', text: 'Leave it as it is' });
     close.addEventListener('click', showLine);
-    save.addEventListener('click', async () => {
-      const wrong = checkNewEnd(event, date.value, time.value, Date.now(), hasSold);
+    send.addEventListener('click', async () => {
+      const wrong = checkExtension(event, date.value, time.value, reason.value);
       if (wrong) {
         problem.textContent = wrong;
         problem.hidden = false;
         return;
       }
       problem.hidden = true;
-      await whileBusy(save, 'Saving…', async () => {
+      await whileBusy(send, 'Sending…', async () => {
         try {
-          event.ends_at = await setEventEnd(event.id, startsAtIso(date.value, time.value));
-          onChange();
+          await requestEventEnd(event.id, startsAtIso(date.value, time.value), reason.value.trim());
+          showStatus({ status: 'pending', requested_ends_at: startsAtIso(date.value, time.value) });
           showLine();
         } catch (error) {
-          problem.textContent = endChangeMessage(error);
+          problem.textContent = extensionMessage(error);
           problem.hidden = false;
         }
       });
     });
     area.className = 'refund-rule refund-rule--open';
     area.replaceChildren(
-      el('span', { class: 'field__label', text: 'When does the event end?' }),
-      el('p', { class: 'field__hint', text: hasSold
-        ? 'Tickets are sold, so you can make it end later (up to 31 days after the start), not earlier. It stays on sale and in Discover until then.'
-        : 'Up to 31 days after the start. It stays on sale and in Discover until then.' }),
+      el('span', { class: 'field__label', text: 'Until when should the event run?' }),
+      el('p', { class: 'field__hint', text: 'An admin checks the request. Until it is approved, the event ends at its current time. Up to 31 days after the start.' }),
       el('div', { class: 'field-pair' }, [date, time]),
+      el('label', { class: 'field__label', text: 'Why does it need more time?' }),
+      reason,
       problem,
-      el('div', { class: 'confirm-row' }, [save, close]),
+      el('div', { class: 'confirm-row' }, [send, close]),
     );
   });
   return area;
@@ -334,12 +351,9 @@ function eventRow(event) {
       lines.push(scan);
     }
   }
-  // The end time can move while the event has not ended (026).
+  // The Host can ask to extend while the event has not ended (026).
   if ((event.status === 'live' || event.status === 'in_review') && !event.cancelled_at && event.ends_at && Date.parse(event.ends_at) > Date.now()) {
-    const sold = (event.ticket_types ?? []).some((type) => type.sold > 0);
-    lines.splice(2, 0, endTimePanel(event, sold, () => {
-      dates.textContent = `${formatWhenRange(event.starts_at, event.ends_at)} · ${event.venue}`;
-    }));
+    lines.splice(2, 0, endTimePanel(event));
   }
   const row = el('li', { class: 'event-row' }, lines);
   if ((event.status === 'live' || event.status === 'in_review') && upcoming) row.append(cancelPanel(event, row));
