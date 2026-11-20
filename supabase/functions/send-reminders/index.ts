@@ -3,7 +3,8 @@
 // with the project's secret key. Sends the reminder email a day before each
 // event, and the phone notification two hours before. It also tells people who
 // set a reminder or hold a ticket when an event passes 50%, 75% and sold out,
-// and tells an Artist when their dispute is answered. Once a day (about 03:00)
+// tells an Artist when their dispute is answered, and a Host when their
+// extension request is answered (031). Once a day (about 03:00)
 // it removes uploaded files that no event or track uses (024_unused_media.sql).
 //
 // Secrets to set under Edge Functions, Secrets:
@@ -16,7 +17,7 @@
 
 import { withSupabase } from 'npm:@supabase/server@^1';
 import webpush from 'npm:web-push@3.6.7';
-import { dueKinds, emailContent, pushPayload, EMAIL_BEFORE_MS, eventSales, salesMilestone, salesNotice, salesEmail, disputeNotice, disputeEmail, cleanupDue, removalBatches } from './schedule.js';
+import { dueKinds, emailContent, pushPayload, EMAIL_BEFORE_MS, eventSales, salesMilestone, salesNotice, salesEmail, disputeNotice, disputeEmail, extensionNotice, extensionEmail, cleanupDue, removalBatches } from './schedule.js';
 
 const env = (name) => Deno.env.get(name) ?? '';
 
@@ -195,6 +196,52 @@ export default {
             }
           } catch (problem) {
             result.failures.push(`dispute email ${dispute.ref}: ${problem.message}`);
+          }
+        }
+      }
+    }
+
+    // Extension requests answered by an admin: tell the Host once (031).
+    result.extensionNotices = 0;
+    if (pushReady || emailReady) {
+      const { data: answered } = await db
+        .from('event_end_requests')
+        .select('id, status, requested_ends_at, decision_note, host_id, events(title)')
+        .neq('status', 'pending')
+        .is('host_notified_at', null)
+        .gt('decided_at', new Date(now - 7 * 24 * 60 * 60 * 1000).toISOString())
+        .limit(200);
+      for (const request of answered ?? []) {
+        // Claim it first, so two runs at once cannot both send it.
+        const { data: claimed } = await db.from('event_end_requests').update({ host_notified_at: new Date().toISOString() })
+          .eq('id', request.id).is('host_notified_at', null).select('id');
+        if (!claimed?.length) continue;
+        const details = { ...request, event_title: request.events?.title ?? '' };
+        if (pushReady) {
+          const { data: devices } = await db.from('push_subscriptions').select('id, endpoint, p256dh, auth').eq('user_id', request.host_id);
+          const payload = JSON.stringify(extensionNotice(details, env('APP_URL')));
+          for (const device of devices ?? []) {
+            try {
+              await webpush.sendNotification({ endpoint: device.endpoint, keys: { p256dh: device.p256dh, auth: device.auth } }, payload, { TTL: 24 * 3600 });
+              result.extensionNotices += 1;
+            } catch (problem) {
+              if (problem.statusCode === 404 || problem.statusCode === 410) {
+                await db.from('push_subscriptions').delete().eq('id', device.id);
+              } else {
+                result.failures.push(`extension push ${request.id}: ${problem.statusCode ?? problem.message}`);
+              }
+            }
+          }
+        }
+        if (emailReady) {
+          try {
+            const { data: user } = await db.auth.admin.getUserById(request.host_id);
+            if (user?.user?.email) {
+              await sendEmail(user.user.email, extensionEmail(details, env('APP_URL')));
+              result.extensionNotices += 1;
+            }
+          } catch (problem) {
+            result.failures.push(`extension email ${request.id}: ${problem.message}`);
           }
         }
       }

@@ -138,3 +138,19 @@ test('025: the clean-up removes only uploads that were never posted; replaced or
   const dry = readFileSync(new URL('../supabase/tests/025_dryrun.sql', import.meta.url), 'utf8');
   assert.ok(dry.includes(sql.slice(sql.indexOf('begin;') + 6, sql.lastIndexOf('commit;'))));
 });
+
+test('031: the Host is told once when an Admin answers their extension request', async () => {
+  const job = await import('../supabase/functions/send-reminders/schedule.js');
+  const approved = job.extensionNotice({ status: 'approved', requested_ends_at: '2027-01-17T20:00:00Z', event_title: 'Jazz Festival' }, 'https://x.github.io/Event_cal/');
+  assert.deepEqual(approved, { title: 'Extension approved', body: '"Jazz Festival" now ends Sunday 17 January at 22:00. It stays on sale until then.', url: 'https://x.github.io/Event_cal/#/my-events' });
+  const declined = job.extensionNotice({ status: 'declined', requested_ends_at: '2027-01-17T20:00:00Z', event_title: 'Jazz Festival', decision_note: 'The venue is booked that day.' }, 'https://x.github.io/Event_cal/');
+  assert.equal(declined.title, 'Extension not approved');
+  assert.equal(declined.body, '"Jazz Festival" keeps its end time. The venue is booked that day.');
+  assert.equal(job.extensionNotice({ status: 'declined', requested_ends_at: '2027-01-17T20:00:00Z' }, '').body, 'Your event keeps its end time.');
+  const email = job.extensionEmail({ status: 'declined', requested_ends_at: '2027-01-17T20:00:00Z', event_title: '<b>x</b>', decision_note: 'no' }, '');
+  assert.match(email.html, /&lt;b&gt;x&lt;\/b&gt;/);
+  assert.equal(email.subject, 'Extension not approved');
+  const { readFileSync } = await import('node:fs');
+  const index = readFileSync(new URL('../supabase/functions/send-reminders/index.ts', import.meta.url), 'utf8');
+  assert.match(index, /from\('event_end_requests'\)\.update\(\{ host_notified_at: new Date\(\)\.toISOString\(\) \}\)\s+\.eq\('id', request\.id\)\.is\('host_notified_at', null\)/);
+});

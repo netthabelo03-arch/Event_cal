@@ -203,6 +203,43 @@ export function disputeEmail(dispute, appUrl) {
 }
 
 // ---------------------------------------------------------------------------
+// Extension requests (026, 031): when an Admin answers, the Host is told once.
+// ---------------------------------------------------------------------------
+
+/** The link to the Host's events in the app. */
+export function myEventsUrl(appUrl) {
+  return `${String(appUrl ?? '').replace(/#.*$/, '').replace(/\/?$/, '/')}#/my-events`;
+}
+
+/**
+ * @param {{ status: 'approved' | 'declined', requested_ends_at: string, decision_note?: string, event_title?: string }} request
+ */
+export function extensionNotice(request, appUrl) {
+  const event = request.event_title ? `"${request.event_title}"` : 'your event';
+  const until = longWhen(request.requested_ends_at);
+  const note = String(request.decision_note ?? '').trim();
+  if (request.status === 'approved') {
+    return { title: 'Extension approved', body: `${event[0].toUpperCase()}${event.slice(1)} now ends ${until}. It stays on sale until then.`.slice(0, 240), url: myEventsUrl(appUrl) };
+  }
+  return { title: 'Extension not approved', body: `${event[0].toUpperCase()}${event.slice(1)} keeps its end time.${note ? ` ${note}` : ''}`.slice(0, 240), url: myEventsUrl(appUrl) };
+}
+
+export function extensionEmail(request, appUrl) {
+  const notice = extensionNotice(request, appUrl);
+  const text = [notice.title, notice.body, '', `See your events: ${notice.url}`, '',
+    'You get this email because you asked to extend an event in plusespot.'].join('\n');
+  const html = `<!doctype html><html><body style="margin:0;padding:24px;background:#0a0a0a;color:#fafafa;font-family:Arial,sans-serif">
+<div style="max-width:480px;margin:0 auto">
+<p style="color:#4ade80;font-weight:bold;margin:0 0 8px">plusespot</p>
+<h1 style="font-size:22px;margin:0 0 12px">${escapeHtml(notice.title)}</h1>
+<p style="margin:0 0 16px">${escapeHtml(notice.body)}</p>
+<p style="margin:16px 0"><a href="${escapeHtml(notice.url)}" style="display:inline-block;padding:12px 20px;background:#22c55e;color:#0a0a0a;font-weight:bold;text-decoration:none;border-radius:999px">See your events</a></p>
+<p style="font-size:12px;color:#a3a3a3">You get this email because you asked to extend an event.</p>
+</div></body></html>`;
+  return { subject: notice.title, text, html };
+}
+
+// ---------------------------------------------------------------------------
 // Unused uploads: once a day, at about 03:00 Johannesburg time, files that no
 // event or track uses (older than 2 days, see 024_unused_media.sql) are removed.
 // ---------------------------------------------------------------------------
