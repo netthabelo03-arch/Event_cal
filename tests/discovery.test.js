@@ -98,3 +98,11 @@ test('old and damaged view records are cleaned up', () => {
   assert.deepEqual(noteView(seen, 'new', THU).seen, { recent: THU - 1000, new: THU });
   for (const junk of [null, undefined, 'text', 42]) assert.equal(noteView(junk, 'e1', THU).count, true);
 });
+
+test('Trending: only Admins see the rank and the activity on a card', async () => {
+  const { trendingDetails, trendingLabel } = await import('../src/events/discovery.js');
+  const item = { rank: 1, tickets: 10, views: 3, event: { id: 'x' } };
+  assert.equal(trendingDetails(item, false), null);
+  assert.equal(trendingDetails(item, undefined), null);
+  assert.deepEqual(trendingDetails(item, true), { rank: 1, label: trendingLabel(item) });
+});

@@ -4,7 +4,7 @@
 
 import { listLiveEvents, listTrending } from '../events/api.js';
 import { startPreviews } from '../events/preview.js';
-import { hostsFrom, trendingFrom, trendingLabel } from '../events/discovery.js';
+import { hostsFrom, trendingFrom, trendingDetails } from '../events/discovery.js';
 import { eventCard, hostCard } from '../events/cards.js';
 import { spotlight } from '../events/spotlight.js';
 import { legalLinks } from './legal.js';
@@ -122,8 +122,11 @@ async function categorySections(liveEvents) {
   return wrapper;
 }
 
-/** Trending this week: a ranked grid, by recent views and tickets sold. Hidden when too quiet. */
-async function trendingSection(liveEvents) {
+/**
+ * Trending this week: a grid, by recent views and tickets sold. Hidden when too quiet.
+ * Only Admins see each event's rank and its activity (tickets or views this week).
+ */
+async function trendingSection(liveEvents, admin) {
   if (liveEvents.length === 0) return null;
   let rows;
   try {
@@ -136,8 +139,11 @@ async function trendingSection(liveEvents) {
   const cards = await Promise.all(list.map(async (item) => {
     const card = await eventCard(item.event);
     card.node.classList.add('card--trending');
-    card.node.prepend(el('span', { class: 'card__rank', 'aria-label': `Number ${item.rank}`, text: String(item.rank) }));
-    card.node.append(el('span', { class: 'card__meta card__trend', text: trendingLabel(item) }));
+    const details = trendingDetails(item, admin);
+    if (details) {
+      card.node.prepend(el('span', { class: 'card__rank', 'aria-label': `Number ${details.rank}`, text: String(details.rank) }));
+      card.node.append(el('span', { class: 'card__meta card__trend', title: 'Only admins see this', text: details.label }));
+    }
     return card;
   }));
   const node = el('section', { class: 'section' }, [
@@ -165,7 +171,7 @@ export async function renderDiscover({ session }) {
     actions.unshift(el('a', { href: '#/feed', class: 'button button--primary button--small', text: 'Watch the feed' }));
   }
 
-  const [stage, trending] = await Promise.all([spotlightSection(liveEvents), trendingSection(liveEvents)]);
+  const [stage, trending] = await Promise.all([spotlightSection(liveEvents), trendingSection(liveEvents, admin === true)]);
   const content = [
     topBar({ profile, session, admin }),
     ...(stage ? [stage] : []),

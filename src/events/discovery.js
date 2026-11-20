@@ -124,3 +124,13 @@ export function trendingLabel({ views, tickets }) {
   if (tickets > 0) return `${tickets} ${tickets === 1 ? 'ticket' : 'tickets'} this week`;
   return `${views} ${views === 1 ? 'view' : 'views'} this week`;
 }
+
+/**
+ * The rank and activity line on a Trending card, for Admins only.
+ * Everyone else sees the card without them.
+ * @returns {{ rank: number, label: string } | null}
+ */
+export function trendingDetails(item, admin) {
+  if (admin !== true) return null;
+  return { rank: item.rank, label: trendingLabel(item) };
+}
