@@ -201,3 +201,29 @@ export function disputeEmail(dispute, appUrl) {
 </div></body></html>`;
   return { subject: notice.title, text, html };
 }
+
+// ---------------------------------------------------------------------------
+// Unused uploads: once a day, at about 03:00 Johannesburg time, files that no
+// event or track uses (older than 2 days, see 024_unused_media.sql) are removed.
+// ---------------------------------------------------------------------------
+
+/** Whether this run (every 5 minutes) is the day's clean-up run: 03:00 to 03:04, Johannesburg. */
+export function cleanupDue(nowMs) {
+  const local = new Date(nowMs + 2 * 3600 * 1000); // Johannesburg is always UTC+2
+  return local.getUTCHours() === 3 && local.getUTCMinutes() < 5;
+}
+
+/** Group the files to remove by bucket, at most 100 per call to the storage API. */
+export function removalBatches(rows, size = 100) {
+  const byBucket = new Map();
+  for (const row of rows ?? []) {
+    if (!row?.bucket || !row?.name) continue;
+    if (!byBucket.has(row.bucket)) byBucket.set(row.bucket, []);
+    byBucket.get(row.bucket).push(row.name);
+  }
+  const batches = [];
+  for (const [bucket, names] of byBucket) {
+    for (let i = 0; i < names.length; i += size) batches.push({ bucket, names: names.slice(i, i + size) });
+  }
+  return batches;
+}
