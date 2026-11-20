@@ -236,6 +236,9 @@ function eventRow(event) {
   if (event.status === 'rejected' && event.reject_reason) {
     lines.push(el('span', { class: 'event-row__meta', text: `Reason: ${event.reject_reason}` }));
   }
+  if (event.status === 'rejected' && Date.parse(event.starts_at) > Date.now()) {
+    lines.push(el('a', { href: `#/edit-event/${event.id}`, class: 'button button--quiet button--small event-row__scan', text: 'Edit and send back' }));
+  }
   if (event.status === 'live') {
     lines.push(el('span', { class: 'event-row__meta', text: viewsLabel(event.view_count) }));
     const types = Array.isArray(event.ticket_types) ? event.ticket_types : [];

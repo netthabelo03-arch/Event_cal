@@ -57,6 +57,35 @@ export async function createEvent(userId, hostName, form) {
   return data;
 }
 
+/**
+ * Send an event that was not approved back for review, with its changes.
+ * A new clip is uploaded only if one was chosen; the ticket types are replaced.
+ */
+export async function resubmitEvent(userId, eventId, form, ticketTypes) {
+  const client = await getClient();
+  let path = null;
+  let seconds = null;
+  if (form.clipFile) {
+    path = clipPath(userId, form.clipFile.type, crypto.randomUUID());
+    const upload = await client.storage.from(BUCKET).upload(path, form.clipFile, { contentType: form.clipFile.type, upsert: false });
+    if (upload.error) throw upload.error;
+    seconds = Math.round(form.clipSeconds * 10) / 10;
+  }
+  const { error } = await client.rpc('resubmit_event', {
+    p_event_id: eventId,
+    p_title: form.title.trim(),
+    p_description: String(form.description ?? '').trim(),
+    p_starts_at: startsAtIso(form.date, form.time),
+    p_venue: form.venue.trim(),
+    p_category: form.category,
+    p_refund_days: Number.isInteger(form.refundDays) ? form.refundDays : null,
+    p_tickets: ticketTypes.map(({ name, price_cents: priceCents, quantity }) => ({ name, price_cents: priceCents, quantity })),
+    p_clip_path: path,
+    p_clip_seconds: seconds,
+  });
+  if (error) throw error;
+}
+
 /** The signed-in host's own events, newest first. */
 export async function listMyEvents(userId) {
   const client = await getClient();
@@ -78,6 +107,17 @@ export async function listLiveEvents(limit = 50) {
   if (error) throw error;
   // Boosted events come first and carry promoted: true.
   return withPromoted(data, await promotedNow(client));
+}
+
+/**
+ * Trending events: { event_id, score, views_7d, tickets_7d }, highest first.
+ * Works signed out. Recent views and tickets sold count (see 018 in supabase/).
+ */
+export async function listTrending(limit = 12) {
+  const client = await getClient();
+  const { data, error } = await client.rpc('trending_events', { p_limit: limit });
+  if (error) throw error;
+  return data ?? [];
 }
 
 /** One event, or null if it does not exist or may not be seen. */

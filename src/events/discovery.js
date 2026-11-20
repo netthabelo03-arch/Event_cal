@@ -99,3 +99,28 @@ export function noteView(seen, eventId, nowMs) {
   kept[eventId] = nowMs;
   return { count: true, seen: kept };
 }
+
+/** Trending shows only when at least this many events have recent activity. */
+export const TRENDING_MIN = 3;
+
+/**
+ * Put the trending rows in order with their events. Rows whose event is not in
+ * the list (already started, or not loaded) are left out.
+ * @returns {{ event: object, rank: number, views: number, tickets: number }[]} empty if fewer than TRENDING_MIN
+ */
+export function trendingFrom(rows, events, min = TRENDING_MIN) {
+  const byId = new Map(events.map((event) => [event.id, event]));
+  const list = [];
+  for (const row of rows ?? []) {
+    const event = byId.get(row.event_id);
+    if (!event) continue;
+    list.push({ event, rank: list.length + 1, views: Number(row.views_7d) || 0, tickets: Number(row.tickets_7d) || 0 });
+  }
+  return list.length >= min ? list : [];
+}
+
+/** "12 going this week" or "340 views this week". */
+export function trendingLabel({ views, tickets }) {
+  if (tickets > 0) return `${tickets} ${tickets === 1 ? 'ticket' : 'tickets'} this week`;
+  return `${views} ${views === 1 ? 'view' : 'views'} this week`;
+}

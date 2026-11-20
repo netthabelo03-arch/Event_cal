@@ -48,6 +48,7 @@ const SCREENS = {
   'my-music': renderMyMusic,
   'new-track': renderNewTrack,
   'edit-track': renderNewTrack,
+  'edit-event': renderNewEvent,
   terms: renderTerms,
   privacy: renderPrivacy,
 };

@@ -2,9 +2,9 @@
 // Browsing is open. Clicking an item opens its details, which asks a
 // signed-out person to log in first (see router.js and app.js).
 
-import { listLiveEvents } from '../events/api.js';
+import { listLiveEvents, listTrending } from '../events/api.js';
 import { startPreviews } from '../events/preview.js';
-import { hostsFrom } from '../events/discovery.js';
+import { hostsFrom, trendingFrom, trendingLabel } from '../events/discovery.js';
 import { eventCard, hostCard } from '../events/cards.js';
 import { spotlight } from '../events/spotlight.js';
 import { legalLinks } from './legal.js';
@@ -122,6 +122,32 @@ async function categorySections(liveEvents) {
   return wrapper;
 }
 
+/** Trending this week: a ranked grid, by recent views and tickets sold. Hidden when too quiet. */
+async function trendingSection(liveEvents) {
+  if (liveEvents.length === 0) return null;
+  let rows;
+  try {
+    rows = await listTrending(12);
+  } catch {
+    return null;
+  }
+  const list = trendingFrom(rows, liveEvents);
+  if (list.length === 0) return null;
+  const cards = await Promise.all(list.map(async (item) => {
+    const card = await eventCard(item.event);
+    card.node.classList.add('card--trending');
+    card.node.prepend(el('span', { class: 'card__rank', 'aria-label': `Number ${item.rank}`, text: String(item.rank) }));
+    card.node.append(el('span', { class: 'card__meta card__trend', text: trendingLabel(item) }));
+    return card;
+  }));
+  const node = el('section', { class: 'section' }, [
+    el('h2', { class: 'section__title', text: 'Trending this week' }),
+    el('div', { class: 'trending' }, cards.map((card) => card.node)),
+  ]);
+  setTimeout(() => startPreviews(node, cards.map((card) => card.video)), 0);
+  return node;
+}
+
 export async function renderDiscover({ session }) {
   // Both are allowed to fail: browsing must still work without them.
   let eventsFailed = false;
@@ -139,7 +165,7 @@ export async function renderDiscover({ session }) {
     actions.unshift(el('a', { href: '#/feed', class: 'button button--primary button--small', text: 'Watch the feed' }));
   }
 
-  const stage = await spotlightSection(liveEvents);
+  const [stage, trending] = await Promise.all([spotlightSection(liveEvents), trendingSection(liveEvents)]);
   const content = [
     topBar({ profile, session, admin }),
     ...(stage ? [stage] : []),
@@ -151,6 +177,7 @@ export async function renderDiscover({ session }) {
     // Say so when the real events could not be fetched, rather than quietly showing only samples.
     ...(eventsFailed ? [el('p', { class: 'message message--error', role: 'alert', text: 'Events could not be loaded just now. Check your connection and reload the page. The items below are samples.' })] : []),
     el('p', { class: 'notice', text: 'Items marked Sample are placeholders until more real events are posted.' }),
+    ...(trending ? [trending] : []),
     await categorySections(liveEvents),
   ];
 

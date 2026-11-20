@@ -59,6 +59,16 @@ export function startsAtIso(date, time) {
   return moment.toISOString();
 }
 
+/** The date and time of an event as typed in the form ("2026-12-05", "19:00"), in Johannesburg time. */
+export function johannesburgParts(iso) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return { date: '', time: '' };
+  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-GB', {
+    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: 'Africa/Johannesburg',
+  }).formatToParts(date).map((part) => [part.type, part.value]));
+  return { date: `${parts.year}-${parts.month}-${parts.day}`, time: `${parts.hour}:${parts.minute}` };
+}
+
 export function checkStart(date, time, nowMs) {
   if (!date) return 'Choose the date of the event.';
   if (!time) return 'Choose the start time.';
@@ -90,12 +100,13 @@ export function checkClip(file, seconds) {
  * Check the whole form.
  * @returns {{ ok: boolean, errors: Record<string, string> }}
  */
-export function checkEvent({ title, date, time, venue, category, description, clipFile, clipSeconds }, nowMs) {
+export function checkEvent({ title, date, time, venue, category, description, clipFile, clipSeconds }, nowMs, { clipOptional = false } = {}) {
   const errors = {};
   const add = (field, message) => {
     if (message) errors[field] = message;
   };
-  add('clip', checkClip(clipFile, clipSeconds));
+  // When editing, the earlier clip is kept unless a new one is chosen.
+  if (!(clipOptional && !clipFile)) add('clip', checkClip(clipFile, clipSeconds));
   add('title', checkTitle(title));
   add('start', checkStart(date, time, nowMs));
   add('venue', checkVenue(venue));

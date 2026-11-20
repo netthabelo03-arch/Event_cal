@@ -6,7 +6,8 @@ import { el } from '../dom.js';
 
 let rowNumber = 0;
 
-export function ticketEditor() {
+/** @param {{ initial?: { name: string, price: string, quantity: string }[] }} [options] rows to start with (when editing) */
+export function ticketEditor({ initial = null } = {}) {
   const list = el('div', { class: 'stack' });
   const rows = [];
   const empty = el('p', { class: 'field__hint', text: 'No tickets: people can still find the event and set reminders.' });
@@ -50,7 +51,9 @@ export function ticketEditor() {
   }
 
   add.addEventListener('click', () => addRow());
-  addRow({ name: 'General' });
+  if (initial) initial.forEach((values) => addRow(values));
+  else addRow({ name: 'General' });
+  refresh();
 
   return {
     node: el('div', { class: 'field' }, [

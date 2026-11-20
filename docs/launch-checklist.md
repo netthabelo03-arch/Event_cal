@@ -55,8 +55,10 @@ Everything here must be done, or decided, before real users are invited. Tick ea
 | # | Item | Owner | Done |
 |---|------|-------|------|
 | 21 | A proper web address (domain) instead of the GitHub Pages address | You | ☐ |
-| 22 | Switch buttons and highlights to the logo's lime colour | Claude | ☐ |
-| 23 | Trending grid ranked by views and tickets sold (backlog B-001) | Claude | ☐ |
-| 24 | Let Hosts edit a rejected event and send it back, as Artists can | Claude | ☐ |
-| 25 | Tell the Artist by notification when a dispute is answered | Claude | ☐ |
+| 22 | Switch buttons and highlights to the logo's lime colour (tried 17 Nov; you chose to stay green) | Claude | n/a |
+| 23 | Trending grid ranked by views and tickets sold (backlog B-001) | Claude | ☑ Sprint 11 |
+| 24 | Let Hosts edit a rejected event and send it back, as Artists can | Claude | ☑ Sprint 11 |
+| 25 | Tell the Artist by notification when a dispute is answered | Claude | ☑ Sprint 11 |
 | 26 | Update the demo deck: new name, logo and the features added since | Claude | ☐ |
+| 27 | Feed text and highlights take the colours of the clip behind them | Claude | ☑ Sprint 11 |
+| 28 | Run `docs/sprint-11-test-cases.md` on real phones | You | ☐ |
