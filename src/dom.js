@@ -29,11 +29,27 @@ export const LOGO_SVG = '<svg aria-hidden="true" class="brand__mark" width="32" 
   + '<path d="M188 212h38l18-40 26 82 16-42h38" fill="none" stroke="#0e1210" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"></path>'
   + '<ellipse cx="256" cy="438" rx="50" ry="11" fill="none" stroke="#c6f432" stroke-width="8"></ellipse></svg>';
 
+/**
+ * A plain left click on the logo goes to Discover and reloads the page, so the
+ * person always gets a fresh copy. Ctrl/Cmd/Shift/Alt or middle clicks are left
+ * alone (open in a new tab, and so on).
+ * @returns {boolean} whether the page is being reloaded
+ */
+export function refreshOnPlainClick(event, win = window) {
+  if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return false;
+  event.preventDefault();
+  win.history.replaceState(win.history.state, '', '#/');
+  win.location.reload();
+  return true;
+}
+
 export function brand() {
   const holder = document.createElement('span');
   holder.innerHTML = LOGO_SVG;
   const mark = holder.firstElementChild;
-  return el('a', { class: 'brand', href: '#/', 'aria-label': 'plusespot, go to Discover' }, [mark, el('span', { class: 'brand__name', text: 'plusespot' })]);
+  const link = el('a', { class: 'brand', href: '#/', 'aria-label': 'plusespot, go to Discover and refresh' }, [mark, el('span', { class: 'brand__name', text: 'plusespot' })]);
+  link.addEventListener('click', (event) => refreshOnPlainClick(event));
+  return link;
 }
 
 /** A link to another screen of the app, for example linkTo('#/signin', 'Sign in'). */
