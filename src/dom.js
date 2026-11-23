@@ -168,7 +168,9 @@ export function slidingPills(label, options, chosen, onChoose) {
     const button = el('button', { type: 'button', class: 'pill', 'aria-pressed': String(option.id === chosen), text: option.name });
     button.addEventListener('click', () => {
       for (const other of buttons) other.setAttribute('aria-pressed', String(other === button));
-      button.scrollIntoView({ behavior: prefersLessMotion() ? 'auto' : 'smooth', block: 'nearest', inline: 'center' });
+      // Slide only the row (never the page) so the chosen pill is in the middle.
+      const row = button.parentElement;
+      row?.scrollTo({ left: button.offsetLeft - (row.clientWidth - button.offsetWidth) / 2, behavior: prefersLessMotion() ? 'auto' : 'smooth' });
       onChoose(option.id);
     });
     return button;

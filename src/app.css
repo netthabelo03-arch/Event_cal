@@ -1188,3 +1188,6 @@ body.full .app { max-width: none; padding: 0; gap: 0; }
 /* The page's side padding, so sliding rows can run to the screen edge. */
 .app { --page-gutter: 24px; }
 @media (max-width: 480px) { .app { --page-gutter: 16px; } }
+
+.categories__picked:empty { display: none; }
+.categories__picked { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
