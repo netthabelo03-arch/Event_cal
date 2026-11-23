@@ -149,3 +149,29 @@ export function passwordChecklist(input, rulesFor) {
   update();
   return list;
 }
+
+/** Whether the person asked for less motion. */
+export function prefersLessMotion() {
+  return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+/**
+ * One row of choice pills that slides sideways (swipe left for more) instead
+ * of wrapping onto several lines. The chosen pill slides into view.
+ * @param {string} label what the group chooses, for screen readers
+ * @param {{ id: string, name: string }[]} options
+ * @param {string} chosen the id chosen at the start
+ * @param {(id: string) => void} onChoose
+ */
+export function slidingPills(label, options, chosen, onChoose) {
+  const buttons = options.map((option) => {
+    const button = el('button', { type: 'button', class: 'pill', 'aria-pressed': String(option.id === chosen), text: option.name });
+    button.addEventListener('click', () => {
+      for (const other of buttons) other.setAttribute('aria-pressed', String(other === button));
+      button.scrollIntoView({ behavior: prefersLessMotion() ? 'auto' : 'smooth', block: 'nearest', inline: 'center' });
+      onChoose(option.id);
+    });
+    return button;
+  });
+  return el('div', { class: 'pills pills--slide', role: 'group', 'aria-label': label }, buttons);
+}

@@ -7,7 +7,7 @@ import { eventCard } from '../events/cards.js';
 import { friendlyAuthError } from '../auth/errors.js';
 import { loadViewer } from '../viewer.js';
 import { topBar } from '../usermenu.js';
-import { el, linkTo } from '../dom.js';
+import { el, linkTo, slidingPills } from '../dom.js';
 
 function pillGroup(label, options, chosen, onChoose) {
   const buttons = options.map((option) => {
@@ -72,7 +72,8 @@ export async function renderSearch({ session }) {
   const form = el('form', { class: 'stack', role: 'search' }, [
     el('label', { for: 'search', class: 'field__label', text: 'Search events' }),
     input,
-    pillGroup('Category', categories, category, (id) => { category = id; run(); }),
+    // One row that slides left for more categories, instead of several lines.
+    slidingPills('Category', categories, category, (id) => { category = id; run(); }),
     pillGroup('Date', WHEN_FILTERS, when, (id) => { when = id; run(); }),
   ]);
   form.addEventListener('submit', (event) => {
