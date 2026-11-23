@@ -17,7 +17,7 @@ import { SAMPLE_SECTIONS, initials } from '../sample.js';
 import { hashFor } from '../router.js';
 import { loadViewer } from '../viewer.js';
 import { topBar } from '../usermenu.js';
-import { el, linkTo } from '../dom.js';
+import { el, linkTo, slidingPills, prefersLessMotion } from '../dom.js';
 
 function sampleCard(kind, item) {
   return el('a', { class: `card card--${kind}`, href: hashFor({ screen: 'detail', kind, id: item.id }) }, [
@@ -76,8 +76,11 @@ async function spotlightSection(liveEvents) {
 }
 
 /**
- * Events grouped by category, under the ribbon. The pills at the top show one
- * category or all of them. A category with no real event yet shows a sample.
+ * Events grouped by category. The category pills sit at the top of Discover
+ * (above "Never miss what's on"), in one row that slides sideways; the rows of
+ * events stay lower down. Choosing a pill shows that category's row (or all)
+ * and scrolls to it. A category with no real event yet shows a sample.
+ * @returns {Promise<{ bar: HTMLElement, rows: HTMLElement }>}
  */
 async function categorySections(liveEvents) {
   const samples = SAMPLE_SECTIONS.find((sample) => sample.kind === 'event')?.items ?? [];
@@ -102,24 +105,18 @@ async function categorySections(liveEvents) {
     sections.push(node);
   }
 
+  const rows = el('div', { class: 'categories', id: 'category-rows' }, sections);
   const choices = [{ id: 'all', name: 'All' }, ...CATEGORIES.filter((category) => sections.some((node) => node.dataset.category === category.id))];
-  const pills = choices.map((choice) => {
-    const pill = el('button', { type: 'button', class: 'pill', 'aria-pressed': String(choice.id === 'all'), text: choice.name });
-    pill.addEventListener('click', () => {
-      pills.forEach((other) => other.setAttribute('aria-pressed', String(other === pill)));
-      sections.forEach((node) => { node.hidden = choice.id !== 'all' && node.dataset.category !== choice.id; });
-    });
-    return pill;
-  });
-
-  const wrapper = el('div', { class: 'categories' }, [
-    el('h2', { class: 'section__title', text: 'Browse by category' }),
-    el('div', { class: 'pills', role: 'group', 'aria-label': 'Category' }, pills),
-    ...sections,
+  const bar = el('section', { class: 'categories categories--bar', 'aria-labelledby': 'browse-title' }, [
+    el('h2', { class: 'section__title', id: 'browse-title', text: 'Browse by category' }),
+    slidingPills('Category', choices, 'all', (id) => {
+      sections.forEach((node) => { node.hidden = id !== 'all' && node.dataset.category !== id; });
+      rows.scrollIntoView({ behavior: prefersLessMotion() ? 'auto' : 'smooth', block: 'start' });
+    }),
   ]);
   // Start once the rows are on the page; startPreviews waits until they are visible.
-  setTimeout(() => startPreviews(wrapper, videos.filter(Boolean)), 0);
-  return wrapper;
+  setTimeout(() => startPreviews(rows, videos.filter(Boolean)), 0);
+  return { bar, rows };
 }
 
 /**
@@ -171,10 +168,12 @@ export async function renderDiscover({ session }) {
     actions.unshift(el('a', { href: '#/feed', class: 'button button--primary button--small', text: 'Watch the feed' }));
   }
 
-  const [stage, trending] = await Promise.all([spotlightSection(liveEvents), trendingSection(liveEvents, admin === true)]);
+  const [stage, trending, browse] = await Promise.all([spotlightSection(liveEvents), trendingSection(liveEvents, admin === true), categorySections(liveEvents)]);
   const content = [
     topBar({ profile, session, admin }),
     ...(stage ? [stage] : []),
+    // Categories first, above "Never miss what's on".
+    browse.bar,
     el('div', { class: 'hero__copy' }, [
       el('h1', { class: 'title hero__title', text: "Never miss what's on." }),
       el('p', { class: 'lead', text: 'Short event clips. Reminders. Tickets.' }),
@@ -184,7 +183,7 @@ export async function renderDiscover({ session }) {
     ...(eventsFailed ? [el('p', { class: 'message message--error', role: 'alert', text: 'Events could not be loaded just now. Check your connection and reload the page. The items below are samples.' })] : []),
     el('p', { class: 'notice', text: 'Items marked Sample are placeholders until more real events are posted.' }),
     ...(trending ? [trending] : []),
-    await categorySections(liveEvents),
+    browse.rows,
   ];
 
   if (liveEvents.length > 0) {

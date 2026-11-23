@@ -1167,3 +1167,24 @@ body.full .app { max-width: none; padding: 0; gap: 0; }
 .refund-notice { font-size: 14px; }
 .refund-notice--good { color: var(--color-text-muted); }
 .refund-notice--bad { color: var(--color-warning); font-weight: 600; }
+
+/* Pills in one row that slides sideways (category choices on Discover and Search) */
+.pills--slide {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  margin-inline: calc(-1 * var(--page-gutter, 16px));
+  padding-inline: var(--page-gutter, 16px);
+  scroll-padding-inline: var(--page-gutter, 16px);
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 var(--page-gutter, 16px), #000 calc(100% - 32px), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 var(--page-gutter, 16px), #000 calc(100% - 32px), transparent 100%);
+}
+.pills--slide::-webkit-scrollbar { display: none; }
+.pills--slide .pill { flex: 0 0 auto; white-space: nowrap; scroll-snap-align: start; }
+.categories--bar { gap: 12px; }
+#category-rows { scroll-margin-top: 16px; }
+/* The page's side padding, so sliding rows can run to the screen edge. */
+.app { --page-gutter: 24px; }
+@media (max-width: 480px) { .app { --page-gutter: 16px; } }
