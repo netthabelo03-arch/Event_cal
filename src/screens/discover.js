@@ -17,7 +17,7 @@ import { SAMPLE_SECTIONS, initials } from '../sample.js';
 import { hashFor } from '../router.js';
 import { loadViewer } from '../viewer.js';
 import { topBar } from '../usermenu.js';
-import { el, linkTo, slidingPills, prefersLessMotion } from '../dom.js';
+import { el, linkTo, slidingPills } from '../dom.js';
 
 function sampleCard(kind, item) {
   return el('a', { class: `card card--${kind}`, href: hashFor({ screen: 'detail', kind, id: item.id }) }, [
@@ -77,9 +77,10 @@ async function spotlightSection(liveEvents) {
 
 /**
  * Events grouped by category. The category pills sit at the top of Discover
- * (above "Never miss what's on"), in one row that slides sideways; the rows of
- * events stay lower down. Choosing a pill shows that category's row (or all)
- * and scrolls to it. A category with no real event yet shows a sample.
+ * (above "Never miss what's on"), in one row that slides sideways. Choosing a
+ * category shows its events right under the pills, without scrolling the
+ * page; "All" puts every row back lower down. A category with no real event
+ * yet shows a sample.
  * @returns {Promise<{ bar: HTMLElement, rows: HTMLElement }>}
  */
 async function categorySections(liveEvents) {
@@ -106,14 +107,23 @@ async function categorySections(liveEvents) {
   }
 
   const rows = el('div', { class: 'categories', id: 'category-rows' }, sections);
+  // The chosen category's row shows here, right under the pills.
+  const picked = el('div', { class: 'categories__picked', 'aria-live': 'polite' });
   const choices = [{ id: 'all', name: 'All' }, ...CATEGORIES.filter((category) => sections.some((node) => node.dataset.category === category.id))];
   const bar = el('section', { class: 'categories categories--bar', 'aria-labelledby': 'browse-title' }, [
     el('h2', { class: 'section__title', id: 'browse-title', text: 'Browse by category' }),
-    slidingPills('Category', choices, 'all', (id) => {
-      sections.forEach((node) => { node.hidden = id !== 'all' && node.dataset.category !== id; });
-      rows.scrollIntoView({ behavior: prefersLessMotion() ? 'auto' : 'smooth', block: 'start' });
-    }),
+    slidingPills('Category', choices, 'all', (id) => showCategory(id)),
+    picked,
   ]);
+  function showCategory(id) {
+    // Every row goes back to its place first, in order.
+    rows.replaceChildren(...sections);
+    picked.replaceChildren();
+    rows.hidden = id !== 'all';
+    if (id === 'all') return;
+    const chosen = sections.find((node) => node.dataset.category === id);
+    if (chosen) picked.replaceChildren(chosen);
+  }
   // Start once the rows are on the page; startPreviews waits until they are visible.
   setTimeout(() => startPreviews(rows, videos.filter(Boolean)), 0);
   return { bar, rows };

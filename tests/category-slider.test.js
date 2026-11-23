@@ -11,7 +11,9 @@ test('Discover: "Browse by category" sits above "Never miss what\'s on"; the row
   assert.ok(order.every((at) => at > 0), 'all three are in the page');
   assert.ok(order[0] < order[1] && order[1] < order[2], 'categories, then the headline, then the rows');
   assert.match(page, /slidingPills\('Category', choices, 'all'/);
-  assert.match(page, /rows\.scrollIntoView\(/, 'choosing a category scrolls to its row');
+  assert.doesNotMatch(page, /rows\.scrollIntoView\(/, 'choosing a category does not scroll the page');
+  assert.match(page, /if \(chosen\) picked\.replaceChildren\(chosen\);/, 'the chosen row shows under the pills');
+  assert.match(page, /rows\.hidden = id !== 'all';/, 'the other rows step aside; All brings them back');
 });
 
 test('Search: the category pills are one row that slides left, not several lines', () => {
@@ -22,5 +24,6 @@ test('Search: the category pills are one row that slides left, not several lines
   assert.match(rule, /overflow-x: auto;/);
   assert.match(css, /\.pills--slide \.pill \{ flex: 0 0 auto; white-space: nowrap;/);
   const dom = read('../src/dom.js');
-  assert.match(dom, /button\.scrollIntoView\(\{ behavior: prefersLessMotion\(\) \? 'auto' : 'smooth', block: 'nearest', inline: 'center' \}\)/, 'the chosen pill slides into view');
+  assert.match(dom, /row\?\.scrollTo\(\{ left: button\.offsetLeft - \(row\.clientWidth - button\.offsetWidth\) \/ 2/, 'the chosen pill slides to the middle of its row');
+  assert.doesNotMatch(dom.slice(dom.indexOf('export function slidingPills')), /scrollIntoView/, 'the page itself never scrolls');
 });
